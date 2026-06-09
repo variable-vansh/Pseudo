@@ -1176,7 +1176,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
 
   // Footer — GitHub link
   el.githubBtn.addEventListener('click', () => {
-    window.open('https://github.com/vansh-codes/pseudo', '_blank');
+    window.open('https://github.com/variable-vansh/Pseudo', '_blank');
   });
 
   // Model pill
