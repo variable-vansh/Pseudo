@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pseudo — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="keys.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- ====== HEADER ====== -->
+    <div class="header">
+      <h1 class="logo">pseudo</h1>
+      <p class="subtitle">API Keys &amp; Settings</p>
+    </div>
+
+    <!-- ====== GEMINI ONBOARDING ====== -->
+    <div class="card" id="gemini-card">
+      <!-- Onboarding state (no key saved) -->
+      <div id="gemini-onboarding">
+        <h2 class="card-title" style="margin-bottom: 16px;">Get a free Gemini key</h2>
+        <p class="onboarding-subtitle">Takes 30 seconds</p>
+
+        <ol class="onboarding-steps">
+          <li>
+            <span>Open Google AI Studio</span>
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="step-link">open →</a>
+          </li>
+          <li><span>Click "Get API key"</span></li>
+          <li><span>Paste it below</span></li>
+        </ol>
+
+        <div class="key-input-row">
+          <input type="password" class="key-input" id="gemini-key-input" placeholder="AIza..." spellcheck="false" autocomplete="off">
+          <button class="save-btn" id="gemini-save-btn">Save</button>
+        </div>
+
+        <p class="onboarding-trust">Free · your quota · stored locally</p>
+        <div class="feedback" id="gemini-feedback"></div>
+      </div>
+
+      <!-- Saved state (key exists) — shown as single read-only row -->
+      <div id="gemini-saved" style="display: none;">
+        <div class="key-row">
+          <span class="key-provider">Gemini</span>
+          <span class="key-masked" id="gemini-masked-key">AIza••••••••</span>
+          <button class="delete-btn" id="gemini-delete-btn" title="Delete">×</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== API KEYS ====== -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">API Keys</h2>
+      </div>
+
+      <div id="keys-list">
+        <!-- Saved keys rendered here as read-only rows -->
+      </div>
+
+      <div class="add-key-row">
+        <select class="provider-select" id="provider-select">
+          <option value="google">Google / Gemini</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="x-ai">xAI / Grok</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="moonshotai">Moonshot / Kimi</option>
+        </select>
+        <input type="password" class="key-input" id="new-key-input" placeholder="Paste API key..." spellcheck="false" autocomplete="off">
+        <button class="save-btn" id="add-key-btn">Save</button>
+      </div>
+      <div class="feedback" id="key-feedback"></div>
+
+      <!-- Single dynamic 'Get API key' link, updates on provider select change -->
+      <a class="helper-link" id="dynamic-key-link" href="#" target="_blank" rel="noopener" style="display:none;"></a>
+    </div>
+
+    <!-- ====== TRUST COPY ====== -->
+    <p class="trust-copy">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Stored locally in your browser. Never sent anywhere.
+    </p>
+
+  </div>
+
+  <script src="keys.js"></script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+/* Pseudo — Keys & Settings Page
+   Same design system as panel.css — Meridian-inspired */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg-base: #111111;
+  --bg-surface: #1c1c1c;
+  --bg-input: #161616;
+  --accent: #2dd4bf;
+  --accent-bg: rgba(45, 212, 191, 0.12);
+  --accent-border: rgba(45, 212, 191, 0.35);
+  --text-primary: #e5e5e5;
+  --text-secondary: #999999;
+  --text-tertiary: #666666;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.10);
+  --error: #ef4444;
+  --success: #22c55e;
+  --radius-pill: 20px;
+  --radius-container: 10px;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 60px 20px 40px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================
+   LAYOUT
+   ========================================= */
+
+.container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+/* =========================================
+   CARDS
+   ========================================= */
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-container);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  font-weight: 500;
+}
+
+/* =========================================
+   GEMINI ONBOARDING
+   ========================================= */
+
+.onboarding-subtitle {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+
+.onboarding-steps {
+  list-style: none;
+  counter-reset: step;
+  margin-bottom: 16px;
+}
+
+.onboarding-steps li {
+  counter-increment: step;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.onboarding-steps li:last-child {
+  border-bottom: none;
+}
+
+.onboarding-steps li::before {
+  content: counter(step);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.onboarding-steps li span {
+  flex: 1;
+}
+
+.step-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: opacity 150ms ease;
+}
+
+.step-link:hover {
+  opacity: 0.8;
+}
+
+.onboarding-trust {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* =========================================
+   INPUTS & BUTTONS
+   ========================================= */
+
+.key-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.key-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.key-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.key-input:focus {
+  border-color: var(--border-medium);
+}
+
+.save-btn {
+  padding: 8px 16px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.save-btn:hover {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: rgba(45, 212, 191, 0.50);
+}
+
+.save-btn:active {
+  transform: scale(0.98);
+}
+
+/* =========================================
+   SAVED KEY ROWS
+   ========================================= */
+
+.key-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.key-row:last-of-type {
+  border-bottom: none;
+}
+
+.key-provider {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 90px;
+  color: var(--text-primary);
+}
+
+.key-masked {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.02em;
+}
+
+.delete-btn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+/* =========================================
+   ADD KEY ROW
+   ========================================= */
+
+.add-key-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.provider-select {
+  padding: 8px 28px 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 150ms ease;
+}
+
+.provider-select:focus {
+  border-color: var(--border-medium);
+}
+
+.provider-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* =========================================
+   FEEDBACK MESSAGES
+   ========================================= */
+
+.feedback {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  display: none;
+  line-height: 1.4;
+}
+
+.feedback.visible.success {
+  display: block;
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.feedback.visible.error {
+  display: block;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* =========================================
+   HELPER LINKS (per-provider "Get key" links)
+   ========================================= */
+
+.helper-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.helper-links:empty {
+  display: none;
+}
+
+.helper-link {
+  display: block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-top: 12px;
+  transition: color 150ms ease, opacity 200ms ease;
+}
+
+.helper-link:hover {
+  color: var(--accent);
+}
+
+/* =========================================
+   TRUST COPY
+   ========================================= */
+
+.trust-copy {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 24px;
+  line-height: 1.5;
+}
+
+.trust-copy svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+  opacity: 0.7;
+}
+
+/* =========================================
+   SCROLLBAR
+   ========================================= */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
