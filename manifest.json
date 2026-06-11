@@ -2,7 +2,6 @@
   "manifest_version": 3,
   "name": "Pseudo",
   "version": "1.0.0",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAojFhqZGf+/4TwgQVY5SAG5FyPMEzT7Nkc6WV4JAig4FKPH7XKv8ybYDxTJKmekgEVGuauiu3scBW2DyCtaFpMp5WtVBE+yLTE3DXirhxigKVTuPKXPJz1zXgSgTUs5wiCAe//sZw9/Uml42uGtZ3gDwcglxbkYKaCW0Pa/XCw+bvsO0N5aLPfuK0nVOirLZ7wwpBCqtSimlT1b+6/SqOQfSr/vdbhXTdYx0L/3abnZBp3cZSqIw+QhKzVyA/ifT1ZKne0VBXPlUXXw84KFe24K8IuyRGFvbkMi5DZuTYSr5z0KkrvpwpRp48CPy0RG+bzTKcXZkFjCG3uDVYuHTiswIDAQAB",
   "description": "Write pseudocode. Get code. Measure token efficiency.",
 
   "permissions": [

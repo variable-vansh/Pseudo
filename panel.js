@@ -308,6 +308,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   const $ = (id) => document.getElementById(id);
 
   const el = {
+    panelMain:          $('panel-main'),
     modelPill:          $('model-pill'),
     modelName:          $('model-name'),
     modelDropdown:      $('model-dropdown'),
@@ -1281,6 +1282,12 @@ The user is practicing. Correcting their approach defeats the purpose.`;
 
     configuredKeys = stored.keys || {};
 
+    if (Object.keys(configuredKeys).length === 0) {
+      el.panelMain.classList.add('empty');
+    } else {
+      el.panelMain.classList.remove('empty');
+    }
+
     if (stored.selectedLanguage) {
       selectedLanguage = stored.selectedLanguage;
       const lang = LANGUAGES.find(l => l.id === selectedLanguage);
@@ -1314,6 +1321,11 @@ The user is practicing. Correcting their approach defeats the purpose.`;
       if (area !== 'local') return;
       if (changes.keys) {
         configuredKeys = changes.keys.newValue || {};
+        if (Object.keys(configuredKeys).length === 0) {
+          el.panelMain.classList.add('empty');
+        } else {
+          el.panelMain.classList.remove('empty');
+        }
         populateModelDropdown();
         updateMetrics();
         syncGenerateState();

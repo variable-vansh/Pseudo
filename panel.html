@@ -65,167 +65,177 @@
   <!-- ====== INFO PANEL (in-flow, inside metrics-section) ====== -->
   <!-- Moved below — rendered inside .metrics-section in markup order -->
 
-  <!-- ====== SELECTORS ====== -->
-  <div class="selectors-row">
-    <div class="pill" id="model-pill" data-active="false">
-      <span class="pill-dot"></span>
-      <span id="model-name">No model</span>
-      <span class="pill-arrow">▾</span>
-      <div class="dropdown" id="model-dropdown"></div>
-    </div>
-    <div class="pill" id="lang-pill">
-      <span id="lang-name">C++</span>
-      <span class="pill-arrow">▾</span>
-      <div class="dropdown" id="lang-dropdown"></div>
-    </div>
-  </div>
-
-  <!-- ====== EDITOR ====== -->
-  <div class="editor-area">
-    <textarea
-      class="pseudo-input"
-      id="pseudo-input"
-      placeholder="describe your approach..."
-      spellcheck="false"
-    ></textarea>
-  </div>
-
-  <!-- ====== GENERATE ====== -->
-  <div class="generate-area">
-    <button class="generate-btn" id="generate-btn" disabled>Generate Code</button>
-  </div>
-
-  <!-- ====== ERROR ====== -->
-  <div class="error-text" id="error-msg" style="display: none;"></div>
-
-  <!-- ====== OUTPUT ====== -->
-  <div class="output-area" id="output-area">
-    <div class="output-header">
-      <span class="output-label">Output</span>
-      <button class="copy-btn" id="copy-btn">Copy</button>
-    </div>
-    <pre class="output-code" id="output-code"></pre>
-  </div>
-
-  <!-- ====== METRICS ====== -->
-  <div class="metrics-section">
-    <div class="metrics-compact">
-      <span class="metrics-text" id="metrics-compact">— tokens</span>
-      <div class="metrics-compact-actions">
-        <button class="metrics-info-btn" id="metrics-info-btn" title="How are these calculated?">ⓘ</button>
-        <button class="metrics-toggle" id="metrics-toggle">Show more</button>
-      </div>
-    </div>
-    <div class="metrics-expanded" id="metrics-expanded">
-      <div class="metrics-section-label">This call</div>
-      <div class="metrics-row">
-        <span class="metrics-label">Input</span>
-        <span class="metrics-value" id="metrics-input-tokens">—</span>
-        <span class="metrics-annotation" id="metrics-input-annotation"></span>
-      </div>
-      <div class="metrics-row" id="metrics-thinking-row" style="display:none;">
-        <span class="metrics-label">Thinking <span class="metrics-badge" title="Internal reasoning tokens — billed but not shown in output.">billed</span></span>
-        <span class="metrics-value" id="metrics-thinking-tokens">—</span>
-      </div>
-      <div class="metrics-row">
-        <span class="metrics-label">Output</span>
-        <span class="metrics-value" id="metrics-output-tokens">—</span>
-        <span class="metrics-annotation" id="metrics-output-annotation"></span>
-      </div>
-      <hr class="metrics-divider">
-      <div class="metrics-row metrics-total-row">
-        <span class="metrics-label">Total</span>
-        <span class="metrics-value" id="metrics-total-tokens">—</span>
-        <span class="metrics-cost" id="metrics-total-cost"></span>
-      </div>
+  <main class="panel-main" id="panel-main">
+    <div class="empty-state" id="empty-state">
+      <h1>Welcome to Pseudo</h1>
+      <p>Pseudo works with any major AI provider. Google's Gemini key is free with no credit card, so that's the easiest way in. But if you already have a key from another provider, that works too.</p>
+      <p class="empty-state-cta">Click the key icon above to add your key and get started.</p>
     </div>
 
-    <!-- In-flow info panel: expands below ⓘ button, pushes content down -->
-    <div class="info-panel" id="info-modal">
-      <div class="info-panel-header">
-        <span class="info-modal-title">How metrics work</span>
-        <button class="header-btn" id="info-modal-close" title="Close">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+    <div class="panel-workspace" id="panel-workspace">
+      <!-- ====== SELECTORS ====== -->
+      <div class="selectors-row">
+        <div class="pill" id="model-pill" data-active="false">
+          <span class="pill-dot"></span>
+          <span id="model-name">No model</span>
+          <span class="pill-arrow">▾</span>
+          <div class="dropdown" id="model-dropdown"></div>
+        </div>
+        <div class="pill" id="lang-pill">
+          <span id="lang-name">C++</span>
+          <span class="pill-arrow">▾</span>
+          <div class="dropdown" id="lang-dropdown"></div>
+        </div>
       </div>
-      <dl class="info-list">
-        <dt>Input tokens</dt>
-        <dd>Exact prompt token count returned by the model's API after generation. Includes your pseudocode and the locked system prompt.</dd>
 
-        <dt>Output tokens</dt>
-        <dd>Exact completion token count returned by the API — the tokens used to generate the code you see.</dd>
-
-        <dt>Thinking tokens</dt>
-        <dd>Shown only for Gemini thinking models. These are internal reasoning tokens used before the response — not visible in the generated code.</dd>
-
-        <dt>Efficiency Score</dt>
-        <dd>Starts at 100. Loses 15 pts per iteration beyond the first. Loses 0.05 pts per token above 120 average input. Gains 20 pts for a single-attempt solve. Clamped 0–100.</dd>
-
-        <dt>Session locked</dt>
-        <dd>Freezes the session record: no more iterations are added. Happens automatically on an Accepted verdict, or manually via the Lock button. The score is final after locking.</dd>
-      </dl>
-    </div>
-  </div>
-
-
-  <!-- ====== SESSION ====== -->
-  <div class="session-banner" id="session-banner">
-    <div class="session-section-label">Session</div>
-    <div class="session-status">
-      <span class="session-info">
-        <span class="session-dot" id="session-dot"></span>
-        <span id="session-status-text">Active</span>
-      </span>
-    </div>
-    <div class="session-stat-grid">
-      <div class="session-stat-cell">
-        <span class="session-stat-number" id="session-call-count">0</span>
-        <span class="session-stat-label">Calls</span>
+      <!-- ====== EDITOR ====== -->
+      <div class="editor-area">
+        <textarea
+          class="pseudo-input"
+          id="pseudo-input"
+          placeholder="describe your approach..."
+          spellcheck="false"
+        ></textarea>
       </div>
-      <div class="session-stat-divider"></div>
-      <div class="session-stat-cell">
-        <span class="session-stat-number" id="session-metrics-text">—</span>
-        <span class="session-stat-label">Tokens</span>
+
+      <!-- ====== GENERATE ====== -->
+      <div class="generate-area">
+        <button class="generate-btn" id="generate-btn" disabled>Generate Code</button>
       </div>
-    </div>
-    <button class="budget-btn" id="budget-btn" type="button">+ Set token budget</button>
-    <input class="budget-input" id="budget-input" type="number" min="100" placeholder="Token limit…">
-    <div class="budget-bar-wrap" id="budget-bar-wrap">
-      <div class="budget-bar-track">
-        <div class="budget-bar-fill" id="budget-bar-fill"></div>
+
+      <!-- ====== ERROR ====== -->
+      <div class="error-text" id="error-msg" style="display: none;"></div>
+
+      <!-- ====== OUTPUT ====== -->
+      <div class="output-area" id="output-area">
+        <div class="output-header">
+          <span class="output-label">Output</span>
+          <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+        <pre class="output-code" id="output-code"></pre>
       </div>
-      <div class="budget-bar-meta">
-        <span>Token budget</span>
-        <span id="budget-bar-label"></span>
-      </div>
-    </div>
-    <button class="lock-btn" id="lock-btn">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="18" height="18" rx="2"/>
-        <path d="M9 9l6 6"/>
-        <path d="M15 9l-6 6"/>
-      </svg>
-      <span>End session</span>
-    </button>
-    <div class="session-summary" id="session-summary">
-      <div class="summary-card">
-        <div class="efficiency-score" id="efficiency-score">100</div>
-        <div class="efficiency-label">Efficiency Score</div>
-        <div class="summary-rows">
+
+      <!-- ====== METRICS ====== -->
+      <div class="metrics-section">
+        <div class="metrics-compact">
+          <span class="metrics-text" id="metrics-compact">Tokens</span>
+          <div class="metrics-compact-actions">
+            <button class="metrics-info-btn" id="metrics-info-btn" title="How are these calculated?">ⓘ</button>
+            <button class="metrics-toggle" id="metrics-toggle">Show more</button>
+          </div>
+        </div>
+        <div class="metrics-expanded" id="metrics-expanded">
+          <div class="metrics-section-label">This call</div>
           <div class="metrics-row">
-            <span class="metrics-label">Iterations</span>
-            <span id="summary-iterations">0</span>
+            <span class="metrics-label">Input</span>
+            <span class="metrics-value" id="metrics-input-tokens">—</span>
+            <span class="metrics-annotation" id="metrics-input-annotation"></span>
+          </div>
+          <div class="metrics-row" id="metrics-thinking-row" style="display:none;">
+            <span class="metrics-label">Thinking <span class="metrics-badge" title="Internal reasoning tokens — billed but not shown in output.">billed</span></span>
+            <span class="metrics-value" id="metrics-thinking-tokens">—</span>
           </div>
           <div class="metrics-row">
-            <span class="metrics-label">Total tokens</span>
-            <span id="summary-tokens">0</span>
+            <span class="metrics-label">Output</span>
+            <span class="metrics-value" id="metrics-output-tokens">—</span>
+            <span class="metrics-annotation" id="metrics-output-annotation"></span>
+          </div>
+          <hr class="metrics-divider">
+          <div class="metrics-row metrics-total-row">
+            <span class="metrics-label">Total</span>
+            <span class="metrics-value" id="metrics-total-tokens">—</span>
+            <span class="metrics-cost" id="metrics-total-cost"></span>
+          </div>
+        </div>
+
+        <!-- In-flow info panel: expands below ⓘ button, pushes content down -->
+        <div class="info-panel" id="info-modal">
+          <div class="info-panel-header">
+            <span class="info-modal-title">How metrics work</span>
+            <button class="header-btn" id="info-modal-close" title="Close">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <dl class="info-list">
+            <dt>Input tokens</dt>
+            <dd>Exact prompt token count returned by the model's API after generation. Includes your pseudocode and the locked system prompt.</dd>
+
+            <dt>Output tokens</dt>
+            <dd>Exact completion token count returned by the API — the tokens used to generate the code you see.</dd>
+
+            <dt>Thinking tokens</dt>
+            <dd>Shown only for Gemini thinking models. These are internal reasoning tokens used before the response — not visible in the generated code.</dd>
+
+            <dt>Efficiency Score</dt>
+            <dd>Starts at 100. Loses 15 pts per iteration beyond the first. Loses 0.05 pts per token above 120 average input. Gains 20 pts for a single-attempt solve. Clamped 0–100.</dd>
+
+            <dt>Session locked</dt>
+            <dd>Freezes the session record: no more iterations are added. Happens automatically on an Accepted verdict, or manually via the Lock button. The score is final after locking.</dd>
+          </dl>
+        </div>
+      </div>
+
+
+      <!-- ====== SESSION ====== -->
+      <div class="session-banner" id="session-banner">
+        <div class="session-section-label">Session</div>
+        <div class="session-status">
+          <span class="session-info">
+            <span class="session-dot" id="session-dot"></span>
+            <span id="session-status-text">Active</span>
+          </span>
+        </div>
+        <div class="session-stat-grid">
+          <div class="session-stat-cell">
+            <span class="session-stat-number" id="session-call-count">0</span>
+            <span class="session-stat-label">Calls</span>
+          </div>
+          <div class="session-stat-divider"></div>
+          <div class="session-stat-cell">
+            <span class="session-stat-number" id="session-metrics-text">—</span>
+            <span class="session-stat-label">Tokens</span>
+          </div>
+        </div>
+        <button class="budget-btn" id="budget-btn" type="button">+ Set token budget</button>
+        <input class="budget-input" id="budget-input" type="number" min="100" placeholder="Token limit…">
+        <div class="budget-bar-wrap" id="budget-bar-wrap">
+          <div class="budget-bar-track">
+            <div class="budget-bar-fill" id="budget-bar-fill"></div>
+          </div>
+          <div class="budget-bar-meta">
+            <span>Token budget</span>
+            <span id="budget-bar-label"></span>
+          </div>
+        </div>
+        <button class="lock-btn" id="lock-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M9 9l6 6"/>
+            <path d="M15 9l-6 6"/>
+          </svg>
+          <span>End session</span>
+        </button>
+        <div class="session-summary" id="session-summary">
+          <div class="summary-card">
+            <div class="efficiency-score" id="efficiency-score">100</div>
+            <div class="efficiency-label">Efficiency Score</div>
+            <div class="summary-rows">
+              <div class="metrics-row">
+                <span class="metrics-label">Iterations</span>
+                <span id="summary-iterations">0</span>
+              </div>
+              <div class="metrics-row">
+                <span class="metrics-label">Total tokens</span>
+                <span id="summary-tokens">0</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <!-- ====== FOOTER BANNER ====== -->
   <div class="footer-banner" id="footer-banner">

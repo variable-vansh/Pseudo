@@ -145,15 +145,17 @@
 
     // Disable options whose key is already saved
     Array.from(providerSelect.options).forEach(opt => {
+      if (!opt.value) return; // Keep placeholder enabled or handle specially?
       const sName = KEY_STORAGE_NAME[opt.value] || opt.value;
       opt.disabled = !!keys[sName];
     });
 
-    // Select first non-disabled
-    const firstAvailable = Array.from(providerSelect.options).find(o => !o.disabled);
-    if (firstAvailable) providerSelect.value = firstAvailable.value;
+    // Reset to placeholder
+    providerSelect.value = "";
 
     updateDynamicLink(keys);
+    // Update placeholder based on selected initially empty
+    newKeyInput.placeholder = 'Paste API key...';
   }
 
   // =============================================
@@ -197,6 +199,7 @@
   // Add other provider key
   addKeyBtn.addEventListener('click', async () => {
     const provider = providerSelect.value;
+    if (!provider) return; // Prevent saving if no provider selected
     const key = newKeyInput.value.trim();
     if (!key) return;
     await saveKey(provider, key);
