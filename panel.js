@@ -293,13 +293,20 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   let selectedModelId    = null;
   let selectedLanguage   = 'cpp';
   let configuredKeys     = {};
+  let activeModels       = {};   // { providerKeyName → modelId } — set from keys page
   let isGenerating       = false;
   let metricsExpanded    = false;
   let currentSession     = null;
   let panelMode          = 'narrow';  // 'narrow' | 'wide'
   let historyOpen        = false;
   let infoModalOpen      = false;
+  let sessionExpanded    = false;
   let _currentController = null;  // module-level AbortController ref
+  let conversationMessages = [];
+  let lastResponse      = '';
+  let lastTokenMetrics  = null;
+
+  const SESSION_KEY = 'pseudo_session';
 
   // =============================================
   // DOM REFERENCES
@@ -317,6 +324,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     langDropdown:       $('lang-dropdown'),
     pseudoInput:        $('pseudo-input'),
     generateBtn:        $('generate-btn'),
+    shortcutLabel:      $('shortcut-label'),
     errorMsg:           $('error-msg'),
     outputArea:         $('output-area'),
     outputCode:         $('output-code'),
@@ -346,7 +354,6 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     efficiencyScore:    $('efficiency-score'),
     summaryIterations:  $('summary-iterations'),
     summaryTokens:      $('summary-tokens'),
-    summaryCost:        $('summary-cost'),
     keysBtn:            $('keys-btn'),
     minimizeBtn:        $('minimize-btn'),
     wideBtn:            $('wide-btn'),
@@ -391,17 +398,120 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     return Number.isFinite(value) && value >= 100 ? Math.floor(value) : 0;
   }
 
+  function selectedProvider() {
+    if (!selectedModelId) return '';
+    return MODELS.find(m => m.id === selectedModelId)?.provider || providerFromId(selectedModelId);
+  }
+
+  function buildSessionSnapshot() {
+    return {
+      pseudoInput:  el.pseudoInput.value,
+      messages:     conversationMessages,
+      lastResponse,
+      language:     selectedLanguage,
+      provider:     selectedProvider(),
+      model:        selectedModelId || '',
+      tokenMetrics: lastTokenMetrics || {},
+      budgetUsed:   currentSession ? sessionTotalTokens(currentSession) : 0,
+      timestamp:    Date.now(),
+      currentSession,
+    };
+  }
+
+  async function persistSessionSnapshot() {
+    await chrome.storage.local.set({ [SESSION_KEY]: buildSessionSnapshot() });
+  }
+
+  function normalizeStoredMessages(messages) {
+    if (!Array.isArray(messages)) return [];
+    return messages
+      .filter(m => m && typeof m.content === 'string' && ['system', 'user', 'assistant'].includes(m.role))
+      .map(m => ({ role: m.role, content: m.content }));
+  }
+
+  function buildRequestMessages(userMsg) {
+    const history = normalizeStoredMessages(conversationMessages)
+      .filter(m => m.role === 'user' || m.role === 'assistant');
+    return [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history,
+      { role: 'user', content: userMsg },
+    ];
+  }
+
+  function restoreSessionSummary() {
+    if (!currentSession?.locked) {
+      el.sessionSummary.classList.remove('visible');
+      return;
+    }
+
+    const totals = currentSession.totals || {};
+    el.efficiencyScore.textContent   = totals.efficiency_score ?? 0;
+    el.summaryIterations.textContent = totals.iteration_count ?? currentSession.iterations?.length ?? 0;
+    el.summaryTokens.textContent     = (totals.total_tokens ?? sessionTotalTokens(currentSession)).toLocaleString();
+    el.sessionSummary.classList.add('visible');
+  }
+
+  function restorePseudoSession(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+
+    el.pseudoInput.value = typeof snapshot.pseudoInput === 'string' ? snapshot.pseudoInput : '';
+    conversationMessages = normalizeStoredMessages(snapshot.messages);
+    lastResponse = typeof snapshot.lastResponse === 'string' ? snapshot.lastResponse : '';
+    lastTokenMetrics = snapshot.tokenMetrics && typeof snapshot.tokenMetrics === 'object'
+      ? snapshot.tokenMetrics
+      : null;
+
+    if (snapshot.language && LANGUAGES.find(l => l.id === snapshot.language)) {
+      selectedLanguage = snapshot.language;
+      const lang = LANGUAGES.find(l => l.id === selectedLanguage);
+      if (lang) el.langName.textContent = lang.name;
+    }
+    if (snapshot.model) {
+      selectedModelId = snapshot.model;
+    }
+    if (snapshot.currentSession && typeof snapshot.currentSession === 'object') {
+      currentSession = snapshot.currentSession;
+      el.sessionBanner.classList.add('visible');
+      updateSessionBanner();
+      restoreSessionSummary();
+    }
+
+    if (lastResponse) {
+      el.outputCode.textContent = lastResponse;
+      el.outputArea.classList.add('visible');
+    } else {
+      el.outputCode.textContent = '';
+      el.outputArea.classList.remove('visible');
+    }
+
+    const usage = lastTokenMetrics?.usage;
+    if (usage && typeof usage === 'object') {
+      updateMetricsFromUsage(usage, lastTokenMetrics.modelId || selectedModelId);
+      metricsExpanded = !!lastTokenMetrics.metricsExpanded;
+      el.metricsExpanded.classList.toggle('visible', metricsExpanded);
+      el.metricsToggle.textContent = metricsExpanded ? 'Show less' : 'Show more';
+    } else {
+      resetMetrics();
+    }
+
+    syncGenerateState();
+    return true;
+  }
+
   async function commitBudgetInput() {
     if (!currentSession || currentSession.locked || currentSession.iterations.length > 0) return;
     currentSession.budgetTokens = readBudgetInput();
     el.budgetInput.style.display = 'none';
     updateSessionBanner();
     await saveSession();
+    await persistSessionSnapshot();
   }
 
   // Pre-generation state: show dashes until we have real numbers.
   function resetMetrics() {
-    el.metricsCompact.textContent              = '— tokens';
+    lastTokenMetrics = null;
+    el.metricsCompact.textContent              = 'Tokens';
     el.metricsInputTk.textContent              = '—';
     el.metricsOutputTk.textContent             = '—';
     el.metricsTotalTk.textContent              = '—';
@@ -418,7 +528,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   function updateMetricsFromUsage(usage, modelId) {
     // If all zeros, the provider returned no usage data — hide the expanded rows
     if (usage.total === 0 && usage.input === 0 && usage.output === 0) {
-      el.metricsCompact.textContent   = '— tokens';
+      el.metricsCompact.textContent   = 'Tokens';
       el.metricsTotalTk.textContent   = '—';
       el.metricsTotalCost.textContent = '';
       return;
@@ -515,8 +625,19 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     return `Error: ${msg}`;
   }
 
-  async function callGoogle(apiKey, modelId, systemPrompt, userMsg) {
+  function messageSystemPrompt(messages) {
+    return messages.find(m => m.role === 'system')?.content || SYSTEM_PROMPT;
+  }
+
+  async function callGoogle(apiKey, modelId, messages) {
     const nativeId = nativeModelId(modelId);
+    const systemPrompt = messageSystemPrompt(messages);
+    const contents = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${nativeId}:generateContent?key=${apiKey}`;
 
     const res = await fetchWithTimeout(url, {
@@ -524,7 +645,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: userMsg }] }],
+        contents,
         generationConfig: { temperature: 0.2 },
       }),
     });
@@ -550,7 +671,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     return { text, responseData: data };  // return full data for extractTokenUsage
   }
 
-  async function callOpenAICompat(apiKey, baseUrl, modelId, systemPrompt, userMsg) {
+  async function callOpenAICompat(apiKey, baseUrl, modelId, messages) {
     const nativeId = nativeModelId(modelId);
     const res = await fetchWithTimeout(baseUrl, {
       method: 'POST',
@@ -560,10 +681,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
       },
       body: JSON.stringify({
         model: nativeId,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userMsg },
-        ],
+        messages,
         temperature: 0.2,
       }),
     });
@@ -584,8 +702,12 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     return { text, responseData: data };  // return full data for extractTokenUsage
   }
 
-  async function callAnthropic(apiKey, modelId, systemPrompt, userMsg) {
+  async function callAnthropic(apiKey, modelId, messages) {
     const nativeId = nativeModelId(modelId);
+    const systemPrompt = messageSystemPrompt(messages);
+    const chatMessages = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role, content: m.content }));
     const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -598,7 +720,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
         model: nativeId,
         max_tokens: 4096,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userMsg }],
+        messages: chatMessages,
         temperature: 0.2,
       }),
     });
@@ -618,17 +740,17 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     return { text, responseData: data };  // return full data for extractTokenUsage
   }
 
-  async function dispatchAPI(provider, apiKey, modelId, systemPrompt, userMsg) {
+  async function dispatchAPI(provider, apiKey, modelId, messages) {
     if (provider === 'google') {
-      return callGoogle(apiKey, modelId, systemPrompt, userMsg);
+      return callGoogle(apiKey, modelId, messages);
     }
     if (provider === 'anthropic') {
-      return callAnthropic(apiKey, modelId, systemPrompt, userMsg);
+      return callAnthropic(apiKey, modelId, messages);
     }
     // All other providers use OpenAI-compatible chat/completions
     const baseUrl = PROVIDER_ENDPOINTS[provider];
     if (!baseUrl) throw new Error(`Unknown provider: ${provider}`);
-    return callOpenAICompat(apiKey, baseUrl, modelId, systemPrompt, userMsg);
+    return callOpenAICompat(apiKey, baseUrl, modelId, messages);
   }
 
   // =============================================
@@ -684,6 +806,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
 
     const langName = LANGUAGES.find(l => l.id === selectedLanguage)?.name || selectedLanguage;
     const userMsg  = `Language: ${langName}\n\n${pseudocode}`;
+    const requestMessages = buildRequestMessages(userMsg);
 
     isGenerating = true;
     el.generateBtn.disabled = true;
@@ -691,7 +814,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     resetMetrics();
 
     try {
-      const result = await dispatchAPI(provider, apiKey, selectedModelId, SYSTEM_PROMPT, userMsg);
+      const result = await dispatchAPI(provider, apiKey, selectedModelId, requestMessages);
 
       // Strip markdown fences
       let code = result.text;
@@ -699,9 +822,20 @@ The user is practicing. Correcting their approach defeats the purpose.`;
 
       el.outputCode.textContent = code;
       el.outputArea.classList.add('visible');
+      lastResponse = code;
+      conversationMessages = [
+        ...requestMessages,
+        { role: 'assistant', content: code },
+      ];
 
       // Extract exact token usage from the raw API response
       const usage = extractTokenUsage(provider, result.responseData);
+      lastTokenMetrics = {
+        usage,
+        modelId: selectedModelId,
+        modelName: modelEntry.name,
+        metricsExpanded: true,
+      };
 
       // Update display with exact values
       updateMetricsFromUsage(usage, selectedModelId);
@@ -735,6 +869,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
         saveSession();
         saveToHistory();
       }
+      await persistSessionSnapshot();
 
     } catch (err) {
       showError(getErrorMessage(err, selectedModelId));
@@ -777,8 +912,21 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   function populateModelDropdown() {
     el.modelDropdown.innerHTML = '';
 
-    // Group available models by provider, only where user has a key
-    const available = MODELS.filter(m => !!configuredKeys[PROVIDER_KEY_NAME[m.provider] || m.provider]);
+    // For each provider with a key, show only the models the user has checked in Settings.
+    // activeModels[keyName] is now an Array of enabled model IDs (or undefined = show all).
+    const available = [];
+    for (const m of MODELS) {
+      const keyName  = PROVIDER_KEY_NAME[m.provider] || m.provider;
+      if (!configuredKeys[keyName]) continue;           // no key → skip provider
+
+      const chosen = activeModels[keyName];             // Array<string> | undefined
+      if (Array.isArray(chosen)) {
+        // User has made a selection — only include if checked
+        if (!chosen.includes(m.id)) continue;
+      }
+      // If nothing stored yet (undefined), include all models for the provider
+      available.push(m);
+    }
 
     if (available.length === 0) {
       el.modelName.textContent    = 'No model';
@@ -793,13 +941,13 @@ The user is practicing. Correcting their approach defeats the purpose.`;
       return;
     }
 
-    // Auto-select: prefer saved, then first google, then first available
+    // Auto-select: prefer saved selection if still in available set, else prefer google, else first
     if (!selectedModelId || !available.find(m => m.id === selectedModelId)) {
       const gemini = available.find(m => m.provider === 'google');
       selectedModelId = gemini ? gemini.id : available[0].id;
     }
 
-    // Group by provider
+    // Group by provider for display
     const groups = {};
     for (const m of available) {
       if (!groups[m.provider]) groups[m.provider] = [];
@@ -807,7 +955,6 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     }
 
     for (const [providerKey, models] of Object.entries(groups)) {
-      // Group header
       const header = document.createElement('div');
       header.className = 'dropdown-group-header';
       header.textContent = PROVIDER_LABELS[providerKey] || providerKey;
@@ -827,6 +974,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
           updateMetrics();
           syncGenerateState();
           chrome.storage.local.set({ selectedModel: m.id });
+          persistSessionSnapshot();
         });
         el.modelDropdown.appendChild(item);
       }
@@ -853,6 +1001,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
         closeAllDropdowns();
         populateLanguageDropdown();
         chrome.storage.local.set({ selectedLanguage: lang.id });
+        persistSessionSnapshot();
       });
       el.langDropdown.appendChild(item);
     }
@@ -946,26 +1095,56 @@ The user is practicing. Correcting their approach defeats the purpose.`;
       const row = document.createElement('div');
       row.className = 'history-row';
 
-      const scoreLabel = entry.efficiencyScore !== null && entry.efficiencyScore !== undefined
-        ? `Score: ${entry.efficiencyScore}`
-        : '—';
-      const cls = entry.efficiencyScore !== null ? scoreClass(entry.efficiencyScore) : '';
+      // — top row: date + score —
+      const topRow = document.createElement('div');
+      topRow.className = 'history-row-top';
 
-      row.innerHTML = `
-        <div class="history-row-top">
-          <span class="history-date">${fmtDate(entry.date)}</span>
-          <span class="history-score ${cls}">${scoreLabel}</span>
-        </div>
-        <div class="history-row-mid">
-          ${entry.platform ? `<span class="history-platform">${entry.platform}</span>` : ''}
-          <span class="history-model">${entry.model || '—'}</span>
-        </div>
-        <div class="history-row-stats">
-          <span>${entry.iterations} iter</span>
-          <span>${entry.totalTokens.toLocaleString()} tk</span>
-        </div>
-        ${entry.pseudoSnippet ? `<div class="history-snippet">${entry.pseudoSnippet.replace(/</g,'&lt;')}</div>` : ''}
-      `;
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'history-date';
+      dateSpan.textContent = fmtDate(entry.date);
+      topRow.appendChild(dateSpan);
+
+      const hasScore = entry.efficiencyScore !== null && entry.efficiencyScore !== undefined;
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'history-score' + (hasScore ? ' ' + scoreClass(entry.efficiencyScore) : '');
+      scoreSpan.textContent = hasScore ? `Score: ${entry.efficiencyScore}` : '—';
+      topRow.appendChild(scoreSpan);
+      row.appendChild(topRow);
+
+      // — mid row: platform + model —
+      const midRow = document.createElement('div');
+      midRow.className = 'history-row-mid';
+      if (entry.platform) {
+        const platSpan = document.createElement('span');
+        platSpan.className = 'history-platform';
+        platSpan.textContent = entry.platform;
+        midRow.appendChild(platSpan);
+      }
+      const modelSpan = document.createElement('span');
+      modelSpan.className = 'history-model';
+      modelSpan.textContent = entry.model || '—';
+      midRow.appendChild(modelSpan);
+      row.appendChild(midRow);
+
+      // — stats row —
+      const statsRow = document.createElement('div');
+      statsRow.className = 'history-row-stats';
+      const iterSpan = document.createElement('span');
+      iterSpan.textContent = `${entry.iterations} iter`;
+      const tkSpan = document.createElement('span');
+      tkSpan.textContent = `${Number(entry.totalTokens || 0).toLocaleString()} tk`;
+      statsRow.appendChild(iterSpan);
+      statsRow.appendChild(tkSpan);
+      row.appendChild(statsRow);
+
+      // — snippet —
+      if (entry.pseudoSnippet) {
+        const snippet = document.createElement('div');
+        snippet.className = 'history-snippet';
+        snippet.textContent = entry.pseudoSnippet;  // textContent = safe, no XSS
+        row.appendChild(snippet);
+      }
+
       el.historyList.appendChild(row);
     }
   }
@@ -990,6 +1169,17 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   // =============================================
 
   function createSession(platform, url, title) {
+    if (currentSession) {
+      currentSession.platform = currentSession.platform || platform;
+      currentSession.problem_url = currentSession.problem_url || url;
+      currentSession.problem_title = currentSession.problem_title || title || 'Unknown Problem';
+      el.sessionBanner.classList.add('visible');
+      updateSessionBanner();
+      restoreSessionSummary();
+      persistSessionSnapshot();
+      return;
+    }
+
     currentSession = {
       id:            crypto.randomUUID(),
       problem_url:   url,
@@ -1015,6 +1205,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     el.sessionBanner.classList.add('visible');
     el.budgetInput.value = '';
     updateSessionBanner();
+    persistSessionSnapshot();
   }
 
   function updateSessionBanner() {
@@ -1037,7 +1228,10 @@ The user is practicing. Correcting their approach defeats the purpose.`;
 
     el.sessionCallCount.textContent = n.toLocaleString();
     el.sessionMetricsText.textContent = n === 0 ? '—' : totalTk.toLocaleString();
-    el.budgetBtn.style.display = canSetBudget && budget === 0 && el.budgetInput.style.display !== 'block' ? '' : 'none';
+
+    // Budget button: only when no iterations yet and no budget set
+    const showBudgetBtn = canSetBudget && budget === 0 && el.budgetInput.style.display !== 'block';
+    el.budgetBtn.style.display = showBudgetBtn ? '' : 'none';
     if (!canSetBudget || budget > 0) {
       el.budgetInput.style.display = 'none';
     }
@@ -1096,6 +1290,7 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     updateSessionBanner();
     saveSession();
     saveToHistory();
+    persistSessionSnapshot();
   }
 
   async function saveSession() {
@@ -1107,9 +1302,27 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     await chrome.storage.local.set({ sessions });
   }
 
-  // =============================================
-  // EVENT LISTENERS
-  // =============================================
+  function isMacPlatform() {
+    const platform = navigator.userAgentData?.platform || navigator.platform || '';
+    return /mac|iphone|ipad|ipod/i.test(platform);
+  }
+
+  function shortcutMod() {
+    return isMacPlatform() ? '⌘' : 'Ctrl';
+  }
+
+  function isShortcut(e, key, shiftKey = false) {
+    const wantsMod = isMacPlatform()
+      ? e.metaKey && !e.ctrlKey
+      : e.ctrlKey && !e.metaKey;
+    return wantsMod && e.shiftKey === shiftKey && e.key.toLowerCase() === key.toLowerCase();
+  }
+
+  function updateShortcutLabel() {
+    const mod = shortcutMod();
+    const label = el.shortcutLabel;
+    if (label) label.textContent = `${mod}+Return`;
+  }
 
   // Textarea → debounced metrics
   let _metricsTimer = null;
@@ -1118,15 +1331,16 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     _metricsTimer = setTimeout(() => {
       updateMetrics();
       syncGenerateState();
+      persistSessionSnapshot();
     }, 300);
   });
 
   el.generateBtn.addEventListener('click', generateCode, { once: false });
 
-  el.pseudoInput.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  document.addEventListener('keydown', (e) => {
+    if (isShortcut(e, 'Enter')) {
       e.preventDefault();
-      generateCode();
+      if (!el.generateBtn.disabled) el.generateBtn.click();
     }
   });
 
@@ -1155,6 +1369,8 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     metricsExpanded = !metricsExpanded;
     el.metricsExpanded.classList.toggle('visible', metricsExpanded);
     el.metricsToggle.textContent = metricsExpanded ? 'Show less' : 'Show more';
+    if (lastTokenMetrics) lastTokenMetrics.metricsExpanded = metricsExpanded;
+    persistSessionSnapshot();
   });
 
   // §6 — Info modal (metrics info panel, now in-flow)
@@ -1261,12 +1477,9 @@ The user is practicing. Correcting their approach defeats the purpose.`;
     const msg = event.data;
     if (!msg || !msg.type) return;
 
-    if (msg.type === 'pseudo-platform-info') {
-      createSession(msg.platform, msg.url, msg.title);
-    } else if (msg.type === 'pseudo-verdict-accepted') {
-      lockSession('accepted');
+    if (msg.type === 'pseudo-set-width') {
+      // Content script echoes back width changes (handled natively, but guard here too)
     } else if (msg.type === 'pseudo-panel-mode') {
-      // Content script restored our saved mode
       panelMode = msg.mode || 'narrow';
     }
   });
@@ -1276,61 +1489,92 @@ The user is practicing. Correcting their approach defeats the purpose.`;
   // =============================================
 
   async function init() {
-    const stored = await chrome.storage.local.get([
-      'keys', 'selectedModel', 'selectedLanguage', 'panelMode',
-    ]);
+    try {
+      const stored = await chrome.storage.local.get([
+        'keys', 'activeModels', 'selectedModel', 'selectedLanguage', 'panelMode', SESSION_KEY,
+      ]);
 
-    configuredKeys = stored.keys || {};
+      configuredKeys = stored.keys || {};
+      activeModels   = stored.activeModels || {};
+      const sessionSnapshot = stored[SESSION_KEY];
+      const hasRestoredSession = !!(
+        sessionSnapshot?.pseudoInput ||
+        sessionSnapshot?.lastResponse ||
+        sessionSnapshot?.messages?.length
+      );
 
-    if (Object.keys(configuredKeys).length === 0) {
-      el.panelMain.classList.add('empty');
-    } else {
-      el.panelMain.classList.remove('empty');
-    }
+      if (Object.keys(configuredKeys).length === 0 && !hasRestoredSession) {
+        el.panelMain.classList.add('empty');
+      } else {
+        el.panelMain.classList.remove('empty');
+      }
 
-    if (stored.selectedLanguage) {
-      selectedLanguage = stored.selectedLanguage;
+      if (sessionSnapshot?.language && LANGUAGES.find(l => l.id === sessionSnapshot.language)) {
+        selectedLanguage = sessionSnapshot.language;
+      } else if (stored.selectedLanguage) {
+        selectedLanguage = stored.selectedLanguage;
+      }
       const lang = LANGUAGES.find(l => l.id === selectedLanguage);
       if (lang) el.langName.textContent = lang.name;
-    }
 
-    if (stored.panelMode) {
-      panelMode = stored.panelMode;
-      // Tell content script to resize immediately (no animation on load)
-      applyPanelMode(panelMode, false);
-    }
+      if (stored.panelMode) {
+        panelMode = stored.panelMode;
+        // Tell content script to resize immediately (no animation on load)
+        applyPanelMode(panelMode, false);
+      }
 
-    // §1 — Load models (from cache or OpenRouter), then populate dropdown
-    await loadModels();
+      // §1 — Load models (from cache or OpenRouter), then populate dropdown
+      await loadModels();
 
-    if (stored.selectedModel && MODELS.find(m => m.id === stored.selectedModel)) {
-      selectedModelId = stored.selectedModel;
-    }
+      if (sessionSnapshot?.model && MODELS.find(m => m.id === sessionSnapshot.model)) {
+        selectedModelId = sessionSnapshot.model;
+      } else if (stored.selectedModel && MODELS.find(m => m.id === stored.selectedModel)) {
+        selectedModelId = stored.selectedModel;
+      }
 
-    populateModelDropdown();
-    populateLanguageDropdown();
-    updateMetrics();
-    syncGenerateState();
+      populateModelDropdown();
+      populateLanguageDropdown();
 
-    // Populate read-only system prompt viewer
-    const syspromptBody = document.getElementById('sysprompt-body');
-    if (syspromptBody) syspromptBody.textContent = SYSTEM_PROMPT;
-
-    // React to key changes from keys page
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area !== 'local') return;
-      if (changes.keys) {
-        configuredKeys = changes.keys.newValue || {};
-        if (Object.keys(configuredKeys).length === 0) {
-          el.panelMain.classList.add('empty');
-        } else {
-          el.panelMain.classList.remove('empty');
-        }
-        populateModelDropdown();
+      const restored = restorePseudoSession(sessionSnapshot);
+      populateModelDropdown();
+      populateLanguageDropdown();
+      if (!restored) {
         updateMetrics();
         syncGenerateState();
       }
-    });
+      updateShortcutLabel();
+
+      // Populate read-only system prompt viewer
+      const syspromptBody = document.getElementById('sysprompt-body');
+      if (syspromptBody) syspromptBody.textContent = SYSTEM_PROMPT;
+
+      // React to key and active-model changes from settings page
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        let needsDropdownRefresh = false;
+        if (changes.keys) {
+          configuredKeys = changes.keys.newValue || {};
+          if (Object.keys(configuredKeys).length === 0 && !el.pseudoInput.value && !lastResponse) {
+            el.panelMain.classList.add('empty');
+          } else {
+            el.panelMain.classList.remove('empty');
+          }
+          needsDropdownRefresh = true;
+        }
+        if (changes.activeModels) {
+          activeModels = changes.activeModels.newValue || {};
+          needsDropdownRefresh = true;
+        }
+        if (needsDropdownRefresh) {
+          populateModelDropdown();
+          updateMetrics();
+          syncGenerateState();
+          persistSessionSnapshot();
+        }
+      });
+    } finally {
+      document.body.classList.remove('hydrating');
+    }
   }
 
   init();

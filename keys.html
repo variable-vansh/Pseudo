@@ -48,6 +48,13 @@
         <div class="key-row">
           <span class="key-provider">Gemini</span>
           <span class="key-masked" id="gemini-masked-key">AIza••••••••</span>
+          <div class="model-picker-wrap">
+            <button class="model-picker-btn" id="gemini-model-btn" type="button">
+              <span class="model-picker-label" id="gemini-model-label">0 models</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="model-picker-dropdown" id="gemini-model-dropdown"></div>
+          </div>
           <button class="delete-btn" id="gemini-delete-btn" title="Delete">×</button>
         </div>
       </div>
@@ -80,6 +87,22 @@
 
       <!-- Single dynamic 'Get API key' link, updates on provider select change -->
       <a class="helper-link" id="dynamic-key-link" href="#" target="_blank" rel="noopener" style="display:none;"></a>
+    </div>
+
+    <!-- ====== BEHAVIOUR SETTINGS ====== -->
+    <div class="card">
+      <div class="card-header" style="margin-bottom: 0;">
+        <h2 class="card-title">Behaviour</h2>
+      </div>
+      <div class="setting-row" id="setting-auto-open">
+        <div class="setting-info">
+          <span class="setting-label">Auto-open on LeetCode</span>
+          <span class="setting-desc">Automatically open the panel when you visit a LeetCode problem page.</span>
+        </div>
+        <button class="toggle-btn" id="auto-open-toggle" role="switch" aria-checked="false" type="button">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
     </div>
 
     <!-- ====== TRUST COPY ====== -->

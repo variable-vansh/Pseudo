@@ -279,6 +279,129 @@ body {
 }
 
 /* =========================================
+   MODEL PICKER — custom checkbox dropdown
+   ========================================= */
+
+.model-picker-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.model-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 9px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.model-picker-btn:hover {
+  border-color: var(--border-medium);
+  background: rgba(255,255,255,0.04);
+}
+
+.model-picker-btn svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.model-picker-wrap.open .model-picker-btn svg {
+  transform: rotate(180deg);
+}
+
+.model-picker-label {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.model-picker-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  min-width: 200px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.model-picker-wrap.open .model-picker-dropdown {
+  display: block;
+}
+
+.model-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.model-picker-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.model-picker-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 120ms ease;
+  position: relative;
+}
+
+.model-picker-item input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.model-picker-item input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  width: 5px;
+  height: 8px;
+  border: 1.5px solid #111;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.model-picker-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: color 100ms ease;
+}
+
+.model-picker-item:hover .model-picker-name {
+  color: var(--text-primary);
+}
+
+.model-picker-item input[type="checkbox"]:checked + .model-picker-name {
+  color: var(--text-primary);
+}
+
+/* =========================================
    ADD KEY ROW
    ========================================= */
 
@@ -315,6 +438,72 @@ body {
 .provider-select option {
   background: var(--bg-surface);
   color: var(--text-primary);
+}
+
+/* =========================================
+   SETTINGS ROWS (toggles)
+   ========================================= */
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 2px;
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.setting-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+/* Toggle switch */
+.toggle-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease;
+  padding: 0;
+  outline: none;
+}
+
+.toggle-btn[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  transition: transform 200ms ease, background 200ms ease;
+}
+
+.toggle-btn[aria-checked="true"] .toggle-thumb {
+  transform: translateX(16px);
+  background: #111;
 }
 
 /* =========================================

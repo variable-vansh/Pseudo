@@ -16,60 +16,6 @@
   let currentWidth = NARROW_W;
 
   // =============================================
-  // PLATFORM DETECTION
-  // =============================================
-
-  const PLATFORMS = {
-    leetcode: {
-      pattern:         /leetcode\.com\/problems\//,
-      titleSelector:   '[data-cy="question-title"], .text-title-large, h1 a',
-      verdictSelector: '[data-e2e-locator="submission-result"]',
-      verdictText:     'accepted',
-    },
-    codeforces: {
-      pattern:         /codeforces\.com\/(problemset\/problem|contest\/\d+\/problem)\//,
-      titleSelector:   '.problem-statement .header .title',
-      verdictSelector: '.verdict-accepted, .verdict_accepted, td.verdict-accepted',
-      verdictText:     'accepted',
-    },
-    hackerrank: {
-      pattern:         /hackerrank\.com\/challenges\//,
-      titleSelector:   '.challenge-page-label, .ui-icon-label h1, h1.challenge-name',
-      verdictSelector: '.congrats-heading, .congratulations-wrapper, .success-message',
-      verdictText:     'congratulations',
-    },
-    atcoder: {
-      pattern:         /atcoder\.jp\/contests\/[^/]+\/tasks\//,
-      titleSelector:   'h2 .h2, #task-statement h2',
-      verdictSelector: '#judge-status',
-      verdictText:     'ac',
-    },
-    codechef: {
-      pattern:         /codechef\.com\/problems\//,
-      titleSelector:   '.breadcrumbs h1, ._problem__title_',
-      verdictSelector: '._success_message_, .success-msg',
-      verdictText:     'correct',
-    },
-  };
-
-  function detectPlatform() {
-    const url = window.location.href;
-    for (const [name, cfg] of Object.entries(PLATFORMS)) {
-      if (cfg.pattern.test(url)) return { name, cfg };
-    }
-    return null;
-  }
-
-  function getProblemTitle(platform) {
-    if (!platform) return document.title;
-    try {
-      const el = document.querySelector(platform.cfg.titleSelector);
-      if (el) return el.textContent.trim() || document.title;
-    } catch (_) {}
-    return document.title.split(' - ')[0].split(' | ')[0].trim();
-  }
-
-  // =============================================
   // PANEL INJECTION
   // =============================================
 
@@ -103,19 +49,6 @@
     });
 
     panelVisible = true;
-
-    panelIframe.addEventListener('load', () => {
-      const platform = detectPlatform();
-      if (platform) {
-        panelIframe.contentWindow.postMessage({
-          type:     'pseudo-platform-info',
-          platform: platform.name,
-          url:      window.location.href,
-          title:    getProblemTitle(platform),
-        }, '*');
-        startVerdictWatcher(platform);
-      }
-    });
 
     if (floatingTab) {
       floatingTab.remove();
@@ -249,34 +182,6 @@
   }
 
   // =============================================
-  // VERDICT WATCHER
-  // =============================================
-
-  let verdictObserver = null;
-
-  function startVerdictWatcher(platform) {
-    if (verdictObserver) verdictObserver.disconnect();
-
-    verdictObserver = new MutationObserver(() => {
-      try {
-        const el = document.querySelector(platform.cfg.verdictSelector);
-        if (el && el.textContent.toLowerCase().includes(platform.cfg.verdictText)) {
-          if (panelIframe && panelIframe.contentWindow) {
-            panelIframe.contentWindow.postMessage({ type: 'pseudo-verdict-accepted' }, '*');
-          }
-          verdictObserver.disconnect();
-        }
-      } catch (_) {}
-    });
-
-    verdictObserver.observe(document.body, {
-      childList:     true,
-      subtree:       true,
-      characterData: true,
-    });
-  }
-
-  // =============================================
   // MESSAGE LISTENERS
   // =============================================
 
@@ -303,11 +208,14 @@
   // AUTO-INJECT
   // =============================================
 
-  // Restore saved panel width before creating
-  chrome.storage.local.get('panelMode', ({ panelMode }) => {
+  // Restore saved panel width; conditionally auto-open on LeetCode
+  chrome.storage.local.get(['panelMode', 'autoOpenLeetCode'], ({ panelMode, autoOpenLeetCode }) => {
     currentWidth = panelMode === 'wide' ? WIDE_W : NARROW_W;
-    const platform = detectPlatform();
-    if (platform) setTimeout(createPanel, 800);
+    // Default is ON — only skip if explicitly set to false
+    const shouldAutoOpen = autoOpenLeetCode !== false;
+    if (shouldAutoOpen && /leetcode\.com\/problems\//.test(window.location.href)) {
+      setTimeout(createPanel, 800);
+    }
   });
 
 })();
