@@ -1,0 +1,26 @@
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Chrome extension build outputs
+*.crx
+*.pem
+*.zip
+
+# Environment / secrets (never commit API keys)
+.env
+.env.*
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (future-proofing — no build step currently)
+node_modules/
+npm-debug.log*
+
+# Python cache
+__pycache__/
+*.pyc

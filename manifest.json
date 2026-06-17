@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Pseudo",
   "version": "1.0.0",
-  "description": "Write pseudocode. Get code. Measure token efficiency.",
+  "description": "Convert pseudocode to real code using your own AI key — with token tracking, efficiency scores, and session history. Runs directly in your browser, no backend.",
 
   "permissions": [
     "storage",
@@ -54,7 +54,22 @@
       "resources": [
         "panel.html",
         "panel.css",
-        "panel.js"
+        "panel/index.js",
+        "panel/constants.js",
+        "panel/state.js",
+        "panel/dom.js",
+        "panel/pricing.js",
+        "panel/models.js",
+        "panel/metrics.js",
+        "panel/shortcuts.js",
+        "panel/panel-mode.js",
+        "panel/api.js",
+        "panel/storage.js",
+        "panel/session.js",
+        "panel/history.js",
+        "panel/dropdowns.js",
+        "panel/generate.js",
+        "panel/events.js"
       ],
       "matches": ["<all_urls>"]
     }
