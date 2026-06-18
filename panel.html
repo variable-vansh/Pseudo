@@ -110,7 +110,10 @@
       <!-- ====== GENERATE ====== -->
       <div class="generate-area">
         <button class="generate-btn" id="generate-btn" disabled>
-          <span class="generate-btn-label">Generate Code</span>
+          <span class="generate-btn-label" id="generate-btn-label">
+            <span class="generate-spinner" id="generate-spinner" aria-hidden="true"></span>
+            <span class="generate-btn-text" id="generate-btn-text">Generate Code</span>
+          </span>
           <span class="generate-btn-shortcut" id="shortcut-label"></span>
         </button>
       </div>
@@ -174,19 +177,19 @@
           </div>
           <dl class="info-list">
             <dt>Input tokens</dt>
-            <dd>Exact prompt token count returned by the model's API after generation. Includes your pseudocode and the locked system prompt.</dd>
+            <dd>The exact number of <a href="https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization" target="_blank" rel="noopener">tokens</a> sent to the model in your prompt. This includes your pseudocode and the system prompt Pseudo adds automatically.</dd>
 
             <dt>Output tokens</dt>
-            <dd>Exact completion token count returned by the API — the tokens used to generate the code you see.</dd>
+            <dd>The tokens the model generated to produce the code you see. Returned by the API after each call.</dd>
 
             <dt>Thinking tokens</dt>
-            <dd>Shown only for Gemini thinking models. These are internal reasoning tokens used before the response — not visible in the generated code.</dd>
+            <dd>Only shown for models that reason before responding (like Gemini 2.5). These internal <a href="https://en.wikipedia.org/wiki/Chain-of-thought_prompting" target="_blank" rel="noopener">chain-of-thought</a> tokens are not visible in the output but do consume compute.</dd>
 
-            <dt>Efficiency Score</dt>
-            <dd>Starts at 100. Loses 15 pts per iteration beyond the first. Loses 0.05 pts per token above 120 average input. Gains 20 pts for a single-attempt solve. Clamped 0–100.</dd>
+            <dt>Resource Units</dt>
+            <dd>An estimate of how much compute your session used, based on model size and token counts. Larger models cost more per token, and output tokens cost more than input tokens because they are generated one at a time. See the <span class="info-badge">?</span> in the session summary for details.</dd>
 
             <dt>Session locked</dt>
-            <dd>Freezes the session record: no more iterations are added. Happens automatically on an Accepted verdict, or manually via the Lock button. The score is final after locking.</dd>
+            <dd>Freezes the session record so no more iterations are added. Happens automatically on an Accepted verdict, or manually via the End session button.</dd>
           </dl>
         </div>
       </div>
@@ -196,55 +199,119 @@
 
   <!-- ====== SESSION ====== -->
   <div class="session-banner" id="session-banner">
-    <!-- Top row: status + stats -->
-    <div class="session-collapsed-row">
-      <div class="session-info">
-        <span class="session-dot" id="session-dot"></span>
-        <span id="session-status-text">Active</span>
-      </div>
-      <div class="session-stat-grid">
-        <div class="session-stat-cell">
+
+    <!-- Idle state: session begins automatically on first generate -->
+    <div class="session-idle" id="session-idle">
+      <span class="session-idle-hint">Session starts on first generate</span>
+    </div>
+
+    <!-- Active state: running session -->
+    <div class="session-active" id="session-active">
+
+      <div class="session-four-col">
+
+        <!-- Col 1: Status -->
+        <div class="session-col session-col--status">
+          <div class="session-info">
+            <span class="session-dot" id="session-dot"></span>
+            <span id="session-status-text">Active</span>
+          </div>
+          <span class="session-sub">Session in progress</span>
+        </div>
+
+        <div class="session-col-divider"></div>
+
+        <!-- Col 2: Calls -->
+        <div class="session-col session-col--stat">
           <span class="session-stat-number" id="session-call-count">0</span>
           <span class="session-stat-label">Calls</span>
         </div>
-        <div class="session-stat-divider"></div>
-        <div class="session-stat-cell">
+
+        <div class="session-col-divider"></div>
+
+        <!-- Col 3: Tokens -->
+        <div class="session-col session-col--stat">
           <span class="session-stat-number" id="session-metrics-text">—</span>
           <span class="session-stat-label">Tokens</span>
         </div>
-      </div>
-    </div>
 
-    <!-- Budget bar (conditionally shown) -->
-    <div class="budget-bar-wrap" id="budget-bar-wrap">
-      <div class="budget-bar-track">
-        <div class="budget-bar-fill" id="budget-bar-fill"></div>
-      </div>
-      <div class="budget-bar-meta">
-        <span>Token budget</span>
-        <span id="budget-bar-label"></span>
-      </div>
-    </div>
+        <div class="session-col-divider"></div>
 
-    <!-- Compact session controls: budget + end session always visible -->
-    <div class="session-controls" id="session-controls">
-      <button class="budget-btn" id="budget-btn" type="button">+ Budget</button>
-      <input class="budget-input" id="budget-input" type="number" min="100" placeholder="Token limit…">
-      <button class="lock-btn" id="lock-btn">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <path d="M9 9l6 6"/>
-          <path d="M15 9l-6 6"/>
-        </svg>
-        <span>End session</span>
-      </button>
-    </div>
+        <!-- Col 4: Controls -->
+        <div class="session-col session-col--controls">
+          <div class="budget-slot">
+            <button class="budget-btn" id="budget-btn" type="button">+ Budget</button>
+            <input class="budget-input" id="budget-input" type="number" min="100" placeholder="Token limit…">
+          </div>
+          <button class="lock-btn disabled" id="lock-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 9l6 6"/>
+              <path d="M15 9l-6 6"/>
+            </svg>
+            <span>End session</span>
+          </button>
+          <p class="session-end-warning" id="session-end-warning"></p>
+        </div>
+
+      </div>
+
+      <!-- Budget bar (conditionally shown) -->
+      <div class="budget-bar-wrap" id="budget-bar-wrap">
+        <div class="budget-bar-track">
+          <div class="budget-bar-fill" id="budget-bar-fill"></div>
+        </div>
+        <div class="budget-bar-meta">
+          <span>Token budget</span>
+          <span id="budget-bar-label"></span>
+        </div>
+      </div>
+
+    </div><!-- /.session-active -->
 
     <!-- Session summary (post-lock) -->
     <div class="session-summary" id="session-summary">
       <div class="summary-card">
-        <div class="efficiency-score" id="efficiency-score">100</div>
-        <div class="efficiency-label">Efficiency Score</div>
+        <!-- Resource Units score -->
+        <div class="ru-score" id="ru-score">—</div>
+        <div class="ru-label">
+          Compute-weighted token cost across this session
+          <span class="ru-help-wrap">
+            <span class="ru-help-trigger" tabindex="0" aria-label="How is this calculated?">?</span>
+            <span class="ru-help-tooltip" role="tooltip">
+              Each call is scored as:<br>
+              <strong>model size &times; (input + 3 &times; output) / 1B</strong><br><br>
+              Output tokens are weighted 3&times; because they are generated <a href="https://en.wikipedia.org/wiki/Autoregressive_model" target="_blank" rel="noopener">autoregressively</a>, one token at a time, while input tokens are processed in parallel.<br><br>
+              Model size is an estimate of <a href="https://en.wikipedia.org/wiki/Floating_point_operations_per_second" target="_blank" rel="noopener">parameters</a>. Larger models cost proportionally more per token.
+            </span>
+          </span>
+        </div>
+
+        <!-- Token breakdown bar -->
+        <div class="ru-token-bar" id="ru-token-bar">
+          <div class="ru-bar-segment ru-bar-input"  id="ru-bar-input"></div>
+          <div class="ru-bar-segment ru-bar-think"  id="ru-bar-think"></div>
+          <div class="ru-bar-segment ru-bar-output" id="ru-bar-output"></div>
+        </div>
+
+        <!-- Token legend -->
+        <div class="ru-token-legend" id="ru-token-legend">
+          <span class="ru-legend-item">
+            <span class="ru-dot ru-dot--input"></span>
+            Input
+            <span class="ru-legend-count" id="ru-legend-input">0</span>
+          </span>
+          <span class="ru-legend-item" id="ru-legend-think-item">
+            <span class="ru-dot ru-dot--think"></span>
+            Thinking
+            <span class="ru-legend-count" id="ru-legend-think">0</span>
+          </span>
+          <span class="ru-legend-item">
+            <span class="ru-dot ru-dot--output"></span>
+            Output
+            <span class="ru-legend-count" id="ru-legend-output">0</span>
+          </span>
+        </div>
         <div class="summary-rows">
           <div class="metrics-row">
             <span class="metrics-label">Iterations</span>
@@ -254,8 +321,18 @@
             <span class="metrics-label">Total tokens</span>
             <span id="summary-tokens">0</span>
           </div>
+          <div class="metrics-row metrics-row--cost">
+            <span class="metrics-label">Est. cost</span>
+            <span id="summary-cost">—</span>
+          </div>
         </div>
       </div>
+      <button class="new-session-btn" id="new-session-btn" type="button">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New Session
+      </button>
     </div>
   </div>
 
@@ -282,6 +359,24 @@
         </button>
       </div>
       <pre class="sysprompt-body" id="sysprompt-body"></pre>
+    </div>
+  </div>
+
+  <!-- ====== RESUME CONFIRM DIALOG ====== -->
+  <div class="resume-dialog-overlay" id="resume-dialog" aria-modal="true" role="dialog" aria-labelledby="resume-dialog-title">
+    <div class="resume-dialog">
+      <div class="resume-dialog-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <p class="resume-dialog-title" id="resume-dialog-title">Welcome back</p>
+      <p class="resume-dialog-body" id="resume-dialog-body">You have a session from <strong id="resume-dialog-age"></strong> ago. Do you want to continue it or start fresh?</p>
+      <div class="resume-dialog-actions">
+        <button class="resume-btn resume-btn-continue" id="resume-continue-btn">Continue Session</button>
+        <button class="resume-btn resume-btn-fresh" id="resume-fresh-btn">Start Fresh</button>
+      </div>
     </div>
   </div>
 

@@ -12,7 +12,7 @@ Pseudo is a browser extension that converts pseudocode to real code using AI lan
 
 **Your prompts go directly to your chosen provider.** When you generate code, your pseudocode is sent directly from your browser to the API endpoint of the model you selected. Pseudo does not see, log, or store the content of these requests.
 
-**Session data stays local.** Token counts, session history, and efficiency scores are stored locally in your browser and are never transmitted anywhere.
+**Session data stays local.** Token counts, session history, and Resource Units are stored locally in your browser and are never transmitted anywhere.
 
 **No analytics or tracking.** Pseudo contains no analytics, crash reporting, advertising, or third-party tracking of any kind.
 

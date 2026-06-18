@@ -6,7 +6,7 @@ import { LANGUAGES, SESSION_KEY, SYSTEM_PROMPT } from './constants.js';
 import { el } from './dom.js';
 import {
   selectedLanguage, selectedModelId, configuredKeys, activeModels,
-  lastResponse, lastTokenMetrics,
+  lastResponse, lastTokenMetrics, currentSession,
   setConfiguredKeys, setActiveModels, setSelectedLanguage, setSelectedModelId, setPanelMode,
 } from './state.js';
 import { MODELS, loadModels } from './models.js';
@@ -17,8 +17,19 @@ import {
   populateModelDropdown, populateLanguageDropdown, syncGenerateState,
 } from './dropdowns.js';
 import { restorePseudoSession, persistSessionSnapshot } from './storage.js';
-import { updateSessionBanner, restoreSessionSummary } from './session.js';
+import { updateSessionBanner, restoreSessionSummary, createSession } from './session.js';
 import { bindEvents } from './events.js';
+
+const INACTIVITY_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
+function formatAge(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''}`;
+  const hrs = Math.round(ms / 3600000);
+  if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''}`;
+  const days = Math.round(ms / 86400000);
+  return `${days} day${days !== 1 ? 's' : ''}`;
+}
 
 async function init() {
   try {
@@ -82,6 +93,22 @@ async function init() {
     if (!restored) {
       updateMetrics();
       syncGenerateState();
+    }
+
+    // If no session was restored, auto-create a shell so budget is settable
+    // before the first generate (same effect as the old "Start Session" button).
+    if (!currentSession) {
+      createSession();
+    }
+
+    // ─── Inactivity resume check ─────────────────
+    // Only prompt if the snapshot has real content and the session is NOT already locked.
+    const snapshotAge = sessionSnapshot?.timestamp ? Date.now() - sessionSnapshot.timestamp : 0;
+    const snapshotHasContent = hasRestoredSession;
+    const sessionIsLocked = sessionSnapshot?.currentSession?.locked === true;
+    if (snapshotHasContent && !sessionIsLocked && snapshotAge > INACTIVITY_THRESHOLD_MS) {
+      el.resumeDialogAge.textContent = formatAge(snapshotAge);
+      el.resumeDialog.classList.add('visible');
     }
 
     updateShortcutLabel(el.shortcutLabel);

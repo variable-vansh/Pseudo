@@ -1,15 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Pseudo",
-  "version": "1.0.0",
-  "description": "Convert pseudocode to real code using your own AI key — with token tracking, efficiency scores, and session history. Runs directly in your browser, no backend.",
+  "version": "1.0.1",
+  "description": "Convert pseudocode to real code using your own AI key — with token tracking, Resource Units, and session history. Runs directly in your browser, no backend.",
 
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting",
-    "clipboardWrite"
-  ],
+  "permissions": ["storage", "activeTab", "scripting", "clipboardWrite"],
 
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -42,9 +37,10 @@
 
   "action": {
     "default_icon": {
-      "16": "icons/16.png",
-      "48": "icons/48.png",
-      "128": "icons/128.png"
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     },
     "default_title": "Toggle Pseudo"
   },
@@ -76,8 +72,9 @@
   ],
 
   "icons": {
-    "16": "icons/16.png",
-    "48": "icons/48.png",
-    "128": "icons/128.png"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

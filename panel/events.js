@@ -13,7 +13,7 @@ import { isShortcut } from './shortcuts.js';
 import { generateCode } from './generate.js';
 import { openHistory, closeHistory, renderHistoryDrawer } from './history.js';
 import { closeAllDropdowns, syncGenerateState } from './dropdowns.js';
-import { lockSession, commitBudgetInput } from './session.js';
+import { lockSession, commitBudgetInput, startNewSession } from './session.js';
 import { persistSessionSnapshot } from './storage.js';
 
 export function bindEvents() {
@@ -160,7 +160,20 @@ export function bindEvents() {
   });
 
   // ─── Session controls ────────────────────────
+  // (No "Start session" button — sessions auto-start on first generate)
+
   el.lockBtn.addEventListener('click', () => { lockSession('manual'); });
+
+  el.newSessionBtn.addEventListener('click', () => { startNewSession(); });
+
+  // ─── Resume dialog ───────────────────────────
+  el.resumeContinueBtn.addEventListener('click', () => {
+    el.resumeDialog.classList.remove('visible');
+  });
+  el.resumeFreshBtn.addEventListener('click', async () => {
+    el.resumeDialog.classList.remove('visible');
+    await startNewSession();
+  });
 
   el.budgetBtn.addEventListener('click', () => {
     el.budgetBtn.style.display    = 'none';

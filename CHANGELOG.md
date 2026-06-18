@@ -16,7 +16,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **Ten languages:** C++, Python, Java, JavaScript, TypeScript, Go, Rust, C, Kotlin, Swift
 - Live model list fetched from OpenRouter with 24-hour cache and curated allowlist fallback
 - Exact token usage display (input / thinking / output / total) from native provider APIs
-- Per-session efficiency score — starts at 100, penalises extra iterations and token-heavy prompts
+- Per-session **Resource Units** — compute-weighted cost based on model size and token counts (output tokens weighted 3× over input)
 - Optional token budget with visual progress bar
 - Session history — last 50 sessions with scores, iteration counts, and pseudocode snippets
 - Wide (800 px) / narrow (400 px) panel toggle

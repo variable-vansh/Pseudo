@@ -7,11 +7,12 @@ import { setHistoryOpen } from './state.js';
 
 // ─── Formatting helpers ─────────────────────
 
-function scoreClass(score) {
-  if (score === null || score === undefined) return '';
-  if (score >= 80) return 'score-green';
-  if (score >= 50) return 'score-yellow';
-  return 'score-red';
+function fmtRU(ru) {
+  if (ru == null) return null;
+  const n = Number(ru);
+  if (!isFinite(n) || n === 0) return null;
+  if (n >= 1000) return `${Math.round(n).toLocaleString()} RU`;
+  return `${n.toFixed(1)} RU`;
 }
 
 function fmtDate(iso) {
@@ -48,10 +49,10 @@ export function renderHistoryDrawer(history) {
     dateSpan.textContent = fmtDate(entry.date);
     topRow.appendChild(dateSpan);
 
-    const hasScore = entry.efficiencyScore !== null && entry.efficiencyScore !== undefined;
+    const ruFormatted = fmtRU(entry.resourceUnits);
     const scoreSpan = document.createElement('span');
-    scoreSpan.className = 'history-score' + (hasScore ? ' ' + scoreClass(entry.efficiencyScore) : '');
-    scoreSpan.textContent = hasScore ? `Score: ${entry.efficiencyScore}` : '—';
+    scoreSpan.className = 'history-score';
+    scoreSpan.textContent = ruFormatted ?? '—';
     topRow.appendChild(scoreSpan);
     row.appendChild(topRow);
 

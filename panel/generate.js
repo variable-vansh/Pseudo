@@ -15,7 +15,7 @@ import { dispatchAPI, getErrorMessage } from './api.js';
 import { extractTokenUsage, calculateCost } from './pricing.js';
 import { updateMetricsFromUsage, resetMetrics } from './metrics.js';
 import { buildRequestMessages, persistSessionSnapshot, readBudgetInput } from './storage.js';
-import { updateSessionBanner, saveSession, saveToHistory } from './session.js';
+import { updateSessionBanner, saveSession, saveToHistory, createSession, computeResourceUnits } from './session.js';
 import { syncGenerateState } from './dropdowns.js';
 
 // ─── UI helpers (local) ─────────────────────
@@ -86,8 +86,9 @@ export async function generateCode() {
   const requestMessages = buildRequestMessages(userMsg);
 
   setIsGenerating(true);
-  el.generateBtn.disabled  = true;
-  el.generateBtn.innerHTML = '<span class="spinner"></span> Generating…';
+  el.generateBtn.disabled = true;
+  el.generateBtnText.textContent = 'Generating…';
+  el.generateSpinner.classList.add('active');
   resetMetrics();
 
   try {
@@ -97,12 +98,18 @@ export async function generateCode() {
     let code = result.text;
     code = code.replace(/^```[\w]*\n?/, '').replace(/\n?```\s*$/, '');
 
-    el.outputCode.textContent = code;
+    // Strip leading Interpretation: line if present (per system prompt spec)
+    const lines = code.split('\n');
+    const strippedCode = lines[0]?.trimStart().startsWith('Interpretation:')
+      ? lines.slice(1).join('\n').trimStart()
+      : code;
+
+    el.outputCode.textContent = strippedCode;
     el.outputArea.classList.add('visible');
-    setLastResponse(code);
+    setLastResponse(strippedCode);
     setConversationMessages([
       ...requestMessages,
-      { role: 'assistant', content: code },
+      { role: 'assistant', content: strippedCode },
     ]);
 
     // Extract exact token usage from the raw API response
@@ -126,6 +133,11 @@ export async function generateCode() {
     // Exact cost from MODEL_PRICING (null if model unknown)
     const cost = calculateCost(usage, selectedModelId) ?? 0;
 
+    // Auto-start a session on the first token sent — zero friction.
+    if (!currentSession) {
+      createSession();
+    }
+
     if (currentSession && !currentSession.locked) {
       if (currentSession.iterations.length === 0) {
         currentSession.budgetTokens = readBudgetInput();
@@ -137,11 +149,16 @@ export async function generateCode() {
         total_tokens:    usage.total,
         cost_usd:        cost,
         model:           modelEntry.name,
+        model_id:        selectedModelId,
         timestamp:       Date.now(),
       });
       if (currentSession.iterations.length === 1) {
         currentSession.pseudoSnippet = pseudocode.substring(0, 80);
       }
+      // Compute and accumulate Resource Units for this call
+      const ru = computeResourceUnits(selectedModelId, usage.input, usage.output, usage.thinking);
+      currentSession.resourceUnits = (currentSession.resourceUnits || 0) + ru;
+      currentSession.estimatedCostUSD = (currentSession.estimatedCostUSD || 0) + (cost ?? 0);
       updateSessionBanner();
       saveSession();
       saveToHistory();
@@ -152,8 +169,9 @@ export async function generateCode() {
     showError(getErrorMessage(err, selectedModelId));
   } finally {
     setIsGenerating(false);
-    el.generateBtn.disabled     = false;
-    el.generateBtn.textContent  = 'Generate Code';
+    el.generateBtn.disabled = false;
+    el.generateBtnText.textContent = 'Generate Code';
+    el.generateSpinner.classList.remove('active');
     syncGenerateState();
   }
 }

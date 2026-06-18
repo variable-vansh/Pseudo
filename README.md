@@ -10,7 +10,7 @@ Pseudo is a Chrome extension that lives as a side panel on coding platforms. Des
 
 ## Why Pseudo
 
-Most AI coding tools hand you the answer. Pseudo is built for **practice** — it transcribes your logic as-is, bugs and all, so you stay in control of the thinking. It also tracks every token you spend per problem, giving you an **efficiency score** so you can see yourself improve over time.
+Most AI coding tools hand you the answer. Pseudo is built for **practice** — it transcribes your logic as-is, bugs and all, so you stay in control of the thinking. It also tracks every token you spend per problem, computing **Resource Units** so you can compare how much compute different approaches consume.
 
 ---
 
@@ -21,9 +21,9 @@ Most AI coding tools hand you the answer. Pseudo is built for **practice** — i
 | 🧠 **Pure transcription** | Implements your pseudocode exactly — never fixes, optimises, or second-guesses your approach |
 | 🔑 **Your keys, your models** | Bring your own API key for any supported provider — no Pseudo backend, no middleman |
 | 📊 **Token tracking** | Exact input/output/thinking token counts per call, and cumulative session totals |
-| 🏆 **Efficiency score** | Per-session score based on iterations and token usage — starts at 100, go for one-shot solves |
+| 🔋 **Resource Units** | Compute-weighted session cost: model size × tokens. Output tokens count 3× more than input — mirrors real inference cost |
 | 💰 **Token budget** | Set an optional token limit per session to practice under constraint |
-| 📜 **Session history** | Last 50 sessions stored locally with scores, iteration counts, and pseudocode snippets |
+| 📜 **Session history** | Last 50 sessions stored locally with Resource Units, iteration counts, and pseudocode snippets |
 | ↔️ **Wide / narrow toggle** | 400 px or 800 px panel width for side-by-side or focused mode |
 | 🔒 **100% local** | API keys, session data, and history never leave your browser |
 

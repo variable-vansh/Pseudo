@@ -18,9 +18,73 @@ Rules:
 - Do not suggest alternatives.
 - Return only the code. No explanation, no preamble, no "note that...".
 - Do not add trailing notes, suggestions, or improvement hints after the code.
-- If a step is genuinely ambiguous, pick the most straightforward interpretation, implement it, and state your interpretation in one line before the code. Do not ask clarifying questions.
+- If a step is genuinely ambiguous, pick the most straightforward interpretation and implement it.
+  State your interpretation in exactly one line before the code block, prefixed with "Interpretation:".
+  Do not ask clarifying questions.
 
 The user is practicing. Correcting their approach defeats the purpose.`;
+
+// ─── Resource Units: model parameter lookup ────────────────────────────────
+// Used by computeResourceUnits() in session.js.
+// Key ordering: longer/more-specific keys must precede shorter ones (e.g.
+// "gpt-4o-mini" before "gpt-4o" before "gpt-4") to avoid false prefix matches.
+// Matched case-insensitively via modelId.toLowerCase().includes(key).
+// Active params used for MoE models (DeepSeek) — not total declared params.
+// All counts are estimates from public reporting; purpose is proportional
+// comparison, not exact FLOPs. Do not expose these values in the UI.
+export const MODEL_PARAMS = {
+  // OpenAI
+  'gpt-4o-mini':        8e9,
+  'gpt-4o':           200e9,
+  'gpt-4-turbo':      200e9,
+  'gpt-4':            200e9,
+  'gpt-3.5-turbo':     20e9,
+  'o3-mini':           20e9,
+  'o1-mini':           20e9,
+  'o1':               200e9,
+  'o3':               200e9,
+  // Anthropic
+  'claude-3-5-haiku':  20e9,
+  'claude-3-haiku':    20e9,
+  'claude-haiku':      20e9,
+  'claude-3-5-sonnet': 70e9,
+  'claude-3-sonnet':   70e9,
+  'claude-sonnet':     70e9,
+  'claude-3-opus':    175e9,
+  'claude-opus':      175e9,
+  // Google
+  'gemini-2.5-flash':  24e9,
+  'gemini-2.0-flash':  24e9,
+  'gemini-1.5-flash':  24e9,
+  'gemini-2.5-pro':   175e9,
+  'gemini-1.5-pro':   175e9,
+  'gemini-1.0-pro':    70e9,
+  'gemini-pro':        70e9,
+  // xAI
+  'grok-2':           314e9,
+  'grok-beta':        314e9,
+  'grok':             314e9,
+  // DeepSeek — active params for MoE, not total declared
+  'deepseek-r1':       37e9,
+  'deepseek-v3':       37e9,
+  'deepseek-chat':     37e9,
+  'deepseek-reasoner': 37e9,
+  // Moonshot
+  'moonshot-v1-128k':  70e9,
+  'moonshot-v1-32k':   70e9,
+  'moonshot-v1-8k':     7e9,
+};
+
+export const DEFAULT_PARAMS = 70e9;
+
+export function getModelParams(modelId) {
+  if (!modelId) return DEFAULT_PARAMS;
+  const id = modelId.toLowerCase();
+  for (const [key, params] of Object.entries(MODEL_PARAMS)) {
+    if (id.includes(key)) return params;
+  }
+  return DEFAULT_PARAMS;
+}
 
 // =============================================
 // §1 — PROVIDER & MODEL CONFIGURATION

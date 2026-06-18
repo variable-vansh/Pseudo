@@ -103,7 +103,13 @@ export function restorePseudoSession(snapshot, {
   }
   if (snapshot.currentSession && typeof snapshot.currentSession === 'object') {
     setCurrentSession(snapshot.currentSession);
-    el.sessionBanner.classList.add('visible');
+    el.sessionIdle.classList.add('hidden');
+    if (snapshot.currentSession.locked) {
+      // locked: show summary, not active controls
+      el.sessionActive.classList.remove('visible');
+    } else {
+      el.sessionActive.classList.add('visible');
+    }
     updateSessionBanner();
     restoreSessionSummary();
   }
