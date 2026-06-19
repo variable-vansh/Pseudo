@@ -6,7 +6,7 @@ import { el } from './dom.js';
 import { currentSession, selectedModelId, setCurrentSession, setConversationMessages, setLastResponse, setLastTokenMetrics } from './state.js';
 import { MODELS } from './models.js';
 import { getModelParams } from './constants.js';
-import { sessionTotalTokens, readBudgetInput, persistSessionSnapshot } from './storage.js';
+import { sessionTotalTokens, readBudgetInput, persistSessionSnapshot, sessionBudgetResourceUnits, sessionResourceUnits } from './storage.js';
 import { resetMetrics } from './metrics.js';
 
 const MAX_HISTORY = 50;
@@ -43,6 +43,12 @@ export function formatResourceUnits(ru) {
   return `${ru.toFixed(1)} Resource Units`;
 }
 
+/** Compact numeric RU for budget bar labels (no unit suffix). */
+export function formatResourceUnitsCompact(ru) {
+  if (ru >= 1000) return Math.round(ru).toLocaleString();
+  return ru.toFixed(1);
+}
+
 // ─── Session creation ───────────────────────
 
 export function createSession(platform, url, title) {
@@ -67,7 +73,7 @@ export function createSession(platform, url, title) {
     locked_at:          null,
     outcome:            null,
     locked:             false,
-    budgetTokens:       0,
+    budgetResourceUnits: 0,
     iterations:         [],
     pseudoSnippet:      '',
     estimatedCostUSD:   0,
@@ -98,7 +104,8 @@ export function updateSessionBanner() {
 
   const n           = currentSession.iterations.length;
   const totalTk     = sessionTotalTokens(currentSession);
-  const budget      = Number(currentSession.budgetTokens) || 0;
+  const totalRU     = sessionResourceUnits(currentSession);
+  const budget      = sessionBudgetResourceUnits(currentSession);
   const canSetBudget = !currentSession.locked && n === 0;
   const hasCalls    = n > 0;
 
@@ -124,22 +131,22 @@ export function updateSessionBanner() {
 
   el.sessionMetricsText.textContent = n === 0 ? '—' : totalTk.toLocaleString();
 
-  // Budget button: only when no iterations yet and no budget set
-  const showBudgetBtn = canSetBudget && budget === 0 && el.budgetInput.style.display !== 'block';
-  el.budgetBtn.style.display = showBudgetBtn ? '' : 'none';
-  if (!canSetBudget || budget > 0) {
-    el.budgetInput.style.display = 'none';
+  // Budget control: fixed-size slot; hide once budget is set or session has calls
+  const showControl = canSetBudget && budget === 0;
+  el.budgetControl.hidden = !showControl;
+  if (!showControl) {
+    el.budgetControl.classList.remove('is-editing');
   }
 
   if (budget > 0) {
-    const ratio   = totalTk / budget;
+    const ratio   = totalRU / budget;
     const pct     = Math.max(0, Math.min(ratio, 1)) * 100;
-    const overage = Math.max(0, totalTk - budget);
+    const overage = Math.max(0, totalRU - budget);
     el.budgetBarFill.style.width      = `${pct}%`;
     el.budgetBarFill.style.background = ratio > 1 ? '#ef4444' : ratio >= 0.8 ? '#f59e0b' : '#2dd4bf';
     el.budgetBarLabel.textContent     = overage > 0
-      ? `${totalTk.toLocaleString()} / ${budget.toLocaleString()}  ·  +${overage.toLocaleString()} over`
-      : `${totalTk.toLocaleString()} / ${budget.toLocaleString()}`;
+      ? `${formatResourceUnitsCompact(totalRU)} / ${formatResourceUnitsCompact(budget)} RU  ·  +${formatResourceUnitsCompact(overage)} over`
+      : `${formatResourceUnitsCompact(totalRU)} / ${formatResourceUnitsCompact(budget)} RU`;
     el.budgetBarWrap.classList.add('visible');
   } else {
     el.budgetBarWrap.classList.remove('visible');
@@ -231,8 +238,19 @@ function renderTokenBar(T_in, T_think, T_out) {
 
 export async function commitBudgetInput() {
   if (!currentSession || currentSession.locked || currentSession.iterations.length > 0) return;
-  currentSession.budgetTokens = readBudgetInput();
-  el.budgetInput.style.display = 'none';
+  currentSession.budgetResourceUnits = readBudgetInput();
+  el.budgetControl.classList.remove('is-editing');
+  updateSessionBanner();
+  await saveSession();
+  await persistSessionSnapshot();
+}
+
+export async function applyBudgetPreset(ru) {
+  if (!currentSession || currentSession.locked || currentSession.iterations.length > 0) return;
+  if (!Number.isFinite(ru) || ru < 10) return;
+  currentSession.budgetResourceUnits = ru;
+  el.budgetInput.value = String(ru);
+  el.budgetControl.classList.remove('is-editing');
   updateSessionBanner();
   await saveSession();
   await persistSessionSnapshot();
@@ -354,9 +372,9 @@ export async function startNewSession() {
   el.sessionStatusText.textContent = 'Active';
   el.lockBtn.classList.add('disabled');
   el.lockBtn.style.display = '';
-  el.budgetBtn.style.display = '';
+  el.budgetControl.hidden = false;
+  el.budgetControl.classList.remove('is-editing');
   el.budgetInput.value = '';
-  el.budgetInput.style.display = 'none';
   el.budgetBarWrap.classList.remove('visible');
   el.budgetBarFill.style.width = '0';
   el.budgetBarLabel.textContent = '';

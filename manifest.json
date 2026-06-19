@@ -1,9 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Pseudo",
-  "version": "1.0.1",
-  "description": "Convert pseudocode to real code using your own AI key — with token tracking, Resource Units, and session history. Runs directly in your browser, no backend.",
-
+  "version": "1.0.2",
+  "description": "Pseudocode to real code via your API key. Token tracking, Resource Units, and session history. Runs in your browser, no backend.",
   "permissions": ["storage", "activeTab", "scripting", "clipboardWrite"],
 
   "host_permissions": [

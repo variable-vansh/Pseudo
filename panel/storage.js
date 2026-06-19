@@ -22,9 +22,20 @@ export function sessionTotalTokens(session) {
   return (session?.iterations || []).reduce((s, i) => s + iterationTotalTokens(i), 0);
 }
 
+export const BUDGET_RU_MIN = 10;
+
 export function readBudgetInput() {
   const value = Number(el.budgetInput.value);
-  return Number.isFinite(value) && value >= 100 ? Math.floor(value) : 0;
+  return Number.isFinite(value) && value >= BUDGET_RU_MIN ? value : 0;
+}
+
+/** Active session RU budget (ignores legacy token budgets from older versions). */
+export function sessionBudgetResourceUnits(session) {
+  return Number(session?.budgetResourceUnits) || 0;
+}
+
+export function sessionResourceUnits(session) {
+  return Number(session?.resourceUnits ?? session?.totals?.resource_units) || 0;
 }
 
 export function selectedProvider() {
@@ -62,7 +73,7 @@ export function buildSessionSnapshot() {
     provider:     selectedProvider(),
     model:        selectedModelId || '',
     tokenMetrics: lastTokenMetrics || {},
-    budgetUsed:   currentSession ? sessionTotalTokens(currentSession) : 0,
+    budgetUsed:   currentSession ? sessionResourceUnits(currentSession) : 0,
     timestamp:    Date.now(),
     currentSession,
   };

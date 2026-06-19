@@ -772,6 +772,8 @@ body.hydrating {
   justify-content: center;
   gap: 5px;
   padding: 8px 0 8px 12px;
+  --session-control-width: 112px;
+  --session-control-height: 28px;
 }
 
 .session-col-divider {
@@ -865,17 +867,40 @@ body.hydrating {
   gap: 6px;
 }
 
-/* Wrapper so btn and input swap in the same slot */
+/* Budget row: narrower button + square ? = same width as End session */
 .budget-slot {
-  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: var(--session-control-width, 112px);
+  height: var(--session-control-height, 28px);
   flex-shrink: 0;
 }
 
+.budget-control {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.budget-control[hidden] {
+  display: none;
+}
+
+.budget-control[hidden] ~ .budget-help-adjacent {
+  display: none;
+}
+
 .budget-btn {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  height: 28px;
-  padding: 0 10px;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
   border: 1px solid rgba(45, 212, 191, 0.25);
   border-radius: 6px;
   background: rgba(45, 212, 191, 0.06);
@@ -884,7 +909,58 @@ body.hydrating {
   font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.budget-help-adjacent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--session-control-height, 28px);
+  height: 100%;
+  flex-shrink: 0;
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 6px;
+  background: rgba(45, 212, 191, 0.06);
+  box-sizing: border-box;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.budget-help-adjacent:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.45);
+}
+
+.budget-help-adjacent .ru-help-trigger {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  font-size: 9px;
+  cursor: help;
+}
+
+.budget-help-adjacent:hover .ru-help-trigger,
+.budget-help-adjacent .ru-help-trigger:focus {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.budget-help-adjacent .ru-help-tooltip {
+  bottom: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.budget-help-adjacent .ru-help-tooltip::after,
+.budget-help-adjacent .ru-help-tooltip::before {
+  left: auto;
+  right: 10px;
+  transform: none;
 }
 
 .budget-btn:hover {
@@ -893,10 +969,17 @@ body.hydrating {
   color: var(--accent);
 }
 
+.budget-control.is-editing .budget-btn {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .budget-input {
+  position: absolute;
+  inset: 0;
   display: none;
-  width: 120px;
-  height: 28px;
+  width: 100%;
+  height: 100%;
   background: rgba(45, 212, 191, 0.04);
   border: 1px solid rgba(45, 212, 191, 0.3);
   border-radius: 6px;
@@ -906,6 +989,10 @@ body.hydrating {
   outline: none;
   padding: 0 10px;
   transition: border-color 150ms ease;
+}
+
+.budget-control.is-editing .budget-input {
+  display: block;
 }
 
 .budget-input:focus {
@@ -951,9 +1038,172 @@ body.hydrating {
 .budget-bar-meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: rgba(255, 255, 255, 0.3);
   font-size: 10px;
   margin-top: 4px;
+}
+
+.budget-bar-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Budget ? tooltips — align right so they stay inside the panel */
+.budget-help-wrap .ru-help-tooltip,
+.budget-bar-help-wrap .ru-help-tooltip {
+  width: 268px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.budget-bar-help-wrap .ru-help-tooltip {
+  bottom: calc(100% + 6px);
+  left: 0;
+  transform: none;
+}
+
+.budget-bar-help-wrap .ru-help-tooltip::after,
+.budget-bar-help-wrap .ru-help-tooltip::before {
+  left: 14px;
+  transform: none;
+}
+
+/* Keep tooltip open while interacting with presets / links */
+.budget-help-adjacent:hover .ru-help-tooltip,
+.budget-help-adjacent:focus-within .ru-help-tooltip,
+.budget-bar-help-wrap:hover .ru-help-tooltip,
+.budget-bar-help-wrap:focus-within .ru-help-tooltip {
+  display: block;
+}
+
+.budget-help-body {
+  padding: 12px 13px 11px;
+}
+
+.budget-help-lead {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.budget-help-lead strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.budget-help-block {
+  margin-bottom: 10px;
+  padding: 8px 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.budget-help-block--example {
+  background: rgba(45, 212, 191, 0.05);
+  border-color: rgba(45, 212, 191, 0.12);
+}
+
+.budget-help-kicker {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  margin-bottom: 5px;
+}
+
+.budget-help-block--example .budget-help-kicker {
+  color: rgba(45, 212, 191, 0.65);
+}
+
+.budget-help-text {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.budget-help-highlight {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(45, 212, 191, 0.95);
+  white-space: nowrap;
+}
+
+.budget-help-tooltip a {
+  color: rgba(45, 212, 191, 0.88);
+  text-decoration: underline;
+  text-decoration-color: rgba(45, 212, 191, 0.28);
+  text-underline-offset: 2px;
+}
+
+.budget-help-tooltip a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.budget-preset-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.budget-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 1px solid rgba(45, 212, 191, 0.18);
+  border-radius: 6px;
+  background: rgba(45, 212, 191, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.budget-preset-btn:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #fff;
+}
+
+.budget-preset-btn:active {
+  background: rgba(45, 212, 191, 0.18);
+}
+
+.budget-preset-value {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(45, 212, 191, 0.95);
+  line-height: 1.2;
+}
+
+.budget-preset-hint {
+  font-size: 9px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.budget-preset-btn:hover .budget-preset-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.budget-help-footnote {
+  margin: 2px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.32);
 }
 
 .budget-bar-label {
@@ -962,7 +1212,10 @@ body.hydrating {
 }
 
 .lock-btn {
-  padding: 5px 10px;
+  width: var(--session-control-width, 112px);
+  height: var(--session-control-height, 28px);
+  padding: 0 10px;
+  box-sizing: border-box;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
@@ -974,6 +1227,7 @@ body.hydrating {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  flex-shrink: 0;
   transition: all 150ms ease;
   white-space: nowrap;
 }
@@ -1577,8 +1831,10 @@ body.hydrating {
 }
 
 .info-panel.open {
-  max-height: 600px;
+  max-height: 960px;
   margin-top: var(--sp-md);
+  margin-bottom: var(--sp-md);
+  overflow-y: auto;
 }
 
 .info-panel-header {
@@ -1598,8 +1854,8 @@ body.hydrating {
 }
 
 .info-list {
-  overflow-y: auto;
-  padding: var(--sp-md) 0 var(--sp-xs);
+  overflow-y: visible;
+  padding: var(--sp-md) 0 var(--sp-lg);
   display: flex;
   flex-direction: column;
   gap: 0;

@@ -140,7 +140,7 @@ export async function generateCode() {
 
     if (currentSession && !currentSession.locked) {
       if (currentSession.iterations.length === 0) {
-        currentSession.budgetTokens = readBudgetInput();
+        currentSession.budgetResourceUnits = readBudgetInput();
       }
       currentSession.iterations.push({
         input_tokens:    usage.input,

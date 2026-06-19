@@ -13,10 +13,19 @@ import { isShortcut } from './shortcuts.js';
 import { generateCode } from './generate.js';
 import { openHistory, closeHistory, renderHistoryDrawer } from './history.js';
 import { closeAllDropdowns, syncGenerateState } from './dropdowns.js';
-import { lockSession, commitBudgetInput, startNewSession } from './session.js';
+import { lockSession, commitBudgetInput, applyBudgetPreset, startNewSession } from './session.js';
 import { persistSessionSnapshot } from './storage.js';
 
+function mountBudgetHelpTooltips() {
+  const tpl = document.getElementById('budget-help-template');
+  if (!tpl) return;
+  document.querySelectorAll('[data-budget-help]').forEach((slot) => {
+    slot.appendChild(tpl.content.cloneNode(true));
+  });
+}
+
 export function bindEvents() {
+  mountBudgetHelpTooltips();
 
   // ─── Textarea — debounced pre-flight ───────
   let _metricsTimer = null;
@@ -176,8 +185,7 @@ export function bindEvents() {
   });
 
   el.budgetBtn.addEventListener('click', () => {
-    el.budgetBtn.style.display    = 'none';
-    el.budgetInput.style.display  = 'block';
+    el.budgetControl.classList.add('is-editing');
     el.budgetInput.focus();
   });
   el.budgetInput.addEventListener('blur', () => { commitBudgetInput(); });
@@ -186,6 +194,20 @@ export function bindEvents() {
       e.preventDefault();
       el.budgetInput.blur();
     }
+  });
+
+  // Preset chips live inside the tooltip — keep focus so blur doesn't fire first
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.budget-preset-btn')) e.preventDefault();
+  });
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.budget-preset-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const ru = Number(btn.dataset.budget);
+    if (!Number.isFinite(ru)) return;
+    await applyBudgetPreset(ru);
   });
 
   // ─── Messages from content script ────────────

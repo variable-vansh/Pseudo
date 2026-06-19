@@ -149,7 +149,7 @@
             <span class="metrics-annotation" id="metrics-input-annotation"></span>
           </div>
           <div class="metrics-row" id="metrics-thinking-row" style="display:none;">
-            <span class="metrics-label">Thinking <span class="metrics-badge" title="Internal reasoning tokens — billed but not shown in output.">billed</span></span>
+            <span class="metrics-label">Thinking <span class="metrics-badge" title="Internal reasoning tokens. Billed but not shown in output.">billed</span></span>
             <span class="metrics-value" id="metrics-thinking-tokens">—</span>
           </div>
           <div class="metrics-row">
@@ -177,19 +177,22 @@
           </div>
           <dl class="info-list">
             <dt>Input tokens</dt>
-            <dd>The exact number of <a href="https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization" target="_blank" rel="noopener">tokens</a> sent to the model in your prompt. This includes your pseudocode and the system prompt Pseudo adds automatically.</dd>
+            <dd>The number of <a href="https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization" target="_blank" rel="noopener">tokens</a> in everything sent to the model on each call: your pseudocode plus the system prompt Pseudo adds automatically.</dd>
 
             <dt>Output tokens</dt>
-            <dd>The tokens the model generated to produce the code you see. Returned by the API after each call.</dd>
+            <dd>Tokens the model <a href="https://en.wikipedia.org/wiki/Autoregressive_model" target="_blank" rel="noopener">generated one at a time</a> to produce the code you see. Reported by the API after every call.</dd>
 
             <dt>Thinking tokens</dt>
-            <dd>Only shown for models that reason before responding (like Gemini 2.5). These internal <a href="https://en.wikipedia.org/wiki/Chain-of-thought_prompting" target="_blank" rel="noopener">chain-of-thought</a> tokens are not visible in the output but do consume compute.</dd>
+            <dd>Only shown for models that <a href="https://en.wikipedia.org/wiki/Reasoning_model" target="_blank" rel="noopener">reason before responding</a>. These internal <a href="https://en.wikipedia.org/wiki/Chain-of-thought_prompting" target="_blank" rel="noopener">chain-of-thought</a> tokens are billed but never appear in the output.</dd>
 
             <dt>Resource Units</dt>
-            <dd>An estimate of how much compute your session used, based on model size and token counts. Larger models cost more per token, and output tokens cost more than input tokens because they are generated one at a time. See the <span class="info-badge">?</span> in the session summary for details.</dd>
+            <dd>A compute-weighted score based on <a href="https://en.wikipedia.org/wiki/Large_language_model" target="_blank" rel="noopener">model size</a> and token usage. It tracks real <a href="https://en.wikipedia.org/wiki/Floating_point_operations_per_second" target="_blank" rel="noopener">inference cost</a> better than raw token count: larger models do more work per token, and output is weighted 3× over input because it is generated <a href="https://en.wikipedia.org/wiki/Autoregressive_model" target="_blank" rel="noopener">autoregressively</a>. See the <span class="info-badge">?</span> in the session summary or next to + Budget for details.</dd>
 
-            <dt>Session locked</dt>
-            <dd>Freezes the session record so no more iterations are added. Happens automatically on an Accepted verdict, or manually via the End session button.</dd>
+            <dt>Resource Unit budget</dt>
+            <dd>An optional cap set before your first generate. Progress is measured in Resource Units, not tokens, so the limit stays meaningful even if you switch models.</dd>
+
+            <dt>Session ended</dt>
+            <dd>Locks the session so no more calls are recorded. Happens when you click End session, or automatically on an Accepted verdict.</dd>
           </dl>
         </div>
       </div>
@@ -240,8 +243,14 @@
         <!-- Col 4: Controls -->
         <div class="session-col session-col--controls">
           <div class="budget-slot">
-            <button class="budget-btn" id="budget-btn" type="button">+ Budget</button>
-            <input class="budget-input" id="budget-input" type="number" min="100" placeholder="Token limit…">
+            <div class="budget-control" id="budget-control">
+              <button class="budget-btn" id="budget-btn" type="button">+ Budget</button>
+              <input class="budget-input" id="budget-input" type="number" min="10" step="1" placeholder="Resource Units…">
+            </div>
+            <span class="ru-help-wrap budget-help-wrap budget-help-adjacent">
+              <span class="ru-help-trigger" tabindex="0" aria-label="What is a Resource Unit budget?">?</span>
+              <span class="ru-help-tooltip budget-help-tooltip" role="tooltip" data-budget-help></span>
+            </span>
           </div>
           <button class="lock-btn disabled" id="lock-btn">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -262,7 +271,13 @@
           <div class="budget-bar-fill" id="budget-bar-fill"></div>
         </div>
         <div class="budget-bar-meta">
-          <span>Token budget</span>
+          <span class="budget-bar-label-wrap">
+            Resource Unit budget
+            <span class="ru-help-wrap budget-bar-help-wrap">
+              <span class="ru-help-trigger" tabindex="0" aria-label="What is a Resource Unit budget?">?</span>
+              <span class="ru-help-tooltip budget-help-tooltip" role="tooltip" data-budget-help></span>
+            </span>
+          </span>
           <span id="budget-bar-label"></span>
         </div>
       </div>
@@ -379,6 +394,50 @@
       </div>
     </div>
   </div>
+
+  <template id="budget-help-template">
+    <div class="budget-help-body">
+      <p class="budget-help-lead">
+        Resource Units estimate how much <strong>compute</strong> your session uses, not just how many <a href="https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization" target="_blank" rel="noopener">tokens</a> you send.
+      </p>
+      <div class="budget-help-block">
+        <div class="budget-help-kicker">Why not raw token count?</div>
+        <p class="budget-help-text">
+          Larger <a href="https://en.wikipedia.org/wiki/Large_language_model" target="_blank" rel="noopener">language models</a> cost more per token. Generated output is built <a href="https://en.wikipedia.org/wiki/Autoregressive_model" target="_blank" rel="noopener">one token at a time</a>, so it weighs more than what you type in.
+        </p>
+      </div>
+      <div class="budget-help-block budget-help-block--example">
+        <div class="budget-help-kicker">Example</div>
+        <p class="budget-help-text">
+          ~500 tokens in + ~300 out on a mid-size model ≈ <span class="budget-help-highlight">15,000 to 50,000 RU</span>.
+        </p>
+      </div>
+      <div class="budget-help-block">
+        <div class="budget-help-kicker">Pick a budget</div>
+        <div class="budget-preset-row" role="group" aria-label="Budget presets">
+          <button type="button" class="budget-preset-btn" data-budget="50000">
+            <span class="budget-preset-value">50K</span>
+            <span class="budget-preset-hint">1 to 2 calls</span>
+          </button>
+          <button type="button" class="budget-preset-btn" data-budget="100000">
+            <span class="budget-preset-value">100K</span>
+            <span class="budget-preset-hint">3 to 5 calls</span>
+          </button>
+          <button type="button" class="budget-preset-btn" data-budget="250000">
+            <span class="budget-preset-value">250K</span>
+            <span class="budget-preset-hint">room to iterate</span>
+          </button>
+          <button type="button" class="budget-preset-btn" data-budget="500000">
+            <span class="budget-preset-value">500K</span>
+            <span class="budget-preset-hint">open practice</span>
+          </button>
+        </div>
+      </div>
+      <p class="budget-help-footnote">
+        Scored from model <a href="https://en.wikipedia.org/wiki/Floating_point_operations_per_second" target="_blank" rel="noopener">size (parameters)</a> × token usage. Same formula as your session summary.
+      </p>
+    </div>
+  </template>
 
   <script type="module" src="panel/index.js"></script>
 </body>

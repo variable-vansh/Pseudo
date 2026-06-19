@@ -39,6 +39,7 @@ export const el = {
   sessionStatusText:  $('session-status-text'),
   sessionMetricsText: $('session-metrics-text'),
   sessionCallCount:   $('session-call-count'),
+  budgetControl:      $('budget-control'),
   budgetBtn:          $('budget-btn'),
   budgetInput:        $('budget-input'),
   budgetBarWrap:      $('budget-bar-wrap'),
